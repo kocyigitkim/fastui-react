@@ -21,6 +21,10 @@ export default class FastGrid extends Component {
         editData: null
     };
     extra = {};
+    constructor(props) {
+        super(props);
+        this.state.mode = props.defaultMode || "grid";
+    }
     saveConfig() {
         window.localStorage.setItem(this.__id, JSON.stringify({ itemCount: this.state.itemCount }));
     }

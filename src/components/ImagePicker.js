@@ -2,12 +2,16 @@ import React from 'react';
 import { CustomField } from './Form';
 import { translate } from '../utils';
 import filesize from 'filesize'
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { v4 as uuid } from 'uuid';
 
 export class ImagePickerField extends CustomField {
     state = {
         files: [],
         dragEntered: false
     }
+    __id = uuid();
+
     grid() {
         const { title, name, value, type } = this.props;
 
@@ -38,19 +42,32 @@ export class ImagePickerField extends CustomField {
         var newFiles = [];
         for (var i = 0; i < files.length; i++) {
             var file = files[i];
+            file.index = i;
+            file.id = uuid();
             if (!file.type.startsWith("image/")) {
                 continue;
             }
             file.base64Data = await toBase64(file).catch(console.error);
             newFiles.push(file);
         }
-        if(files.length >0 && newFiles.length!=files.length){
+        if (files.length > 0 && newFiles.length != files.length) {
             //error: unsupported file type
+        } else {
+            if (this.props.onChange) this.props.onChange(newFiles);
         }
         return newFiles;
     }
+    uploadFile() {
+        console.log(this.fileUpload);
+        this.fileUpload.click();
+    }
+    async handleFileUpload(evt) {
+        this.setState({
+            files: await this.processFiles.call(this, evt.target.files)
+        });
+    }
     form() {
-        const { type, placeholder, title, description, mini, multi } = this.props;
+        const { title, description, mini, multi, value } = this.props;
         const emptyTitle = translate("IMAGEPICKER.EMPTY.TITLE");
         const emptyDesc = translate("IMAGEPICKER.EMPTY.DESC");
         const isEmpty = this.state.files.length === 0;
@@ -62,42 +79,81 @@ export class ImagePickerField extends CustomField {
             onDragLeave: this.handleDragLeave.bind(this)
         };
 
-        const firstFile = this.state.files[0];
+        const firstFile = value || this.state.files[0];
 
         return <div className="form-group">
-            <input type="hidden" ref={(r) => this.fileUpload = r} className="hidden" />
+            <input accept="image/*" onChange={this.handleFileUpload.bind(this)} multiple={multi} type="file" ref={(r) => this.fileUpload = r} style={{ display: 'none' }} />
             <label className="text-dark font-weight-bold text-lg mb-2">{translate(title)}</label>
             <div {...dragProps} className="border border-secondary rounded p-3" style={{ minHeight: 100, maxHeight: 300, overflow: 'hidden', overflowY: 'auto', position: 'relative' }}>
                 {isEmpty ? (<div className="p-2">
                     <div style={{ float: 'right', height: '100%' }}>
-                        <button type="button" className="btn btn-primary btn-size-lg" style={{ height: 70, minWidth: 100 }}><i className="bi bi-upload"></i> {translate("IMAGEPICKER.EMPTY.UPLOAD")}</button>
+                        <button onClick={this.uploadFile.bind(this)} type="button" className="btn btn-primary btn-size-lg" style={{ height: 70, minWidth: 100 }}><i className="bi bi-upload"></i> {translate("IMAGEPICKER.EMPTY.UPLOAD")}</button>
                     </div>
                     <label className="text-dark font-weight-bold">{emptyTitle}</label>
                     <p>{emptyDesc}</p>
                 </div>) : (<div>
-                    <div className="row">
-                        <div className="col-xs-12 col-sm-6 col-md-6" style={{ display: 'flex', alignItems: 'center' }}>
-                            <div style={{
-                                width: 96, height: 96, borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)',
-                                background: `url(${firstFile && firstFile.base64Data}) no-repeat`, backgroundPosition: 'center center', backgroundSize: 'contain'
-                            }}></div>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: 10 }}>
-                                <label style={{ fontWeight: 'bold', marginBottom: 3, maxWidth: 250 }}>{firstFile && firstFile.name}</label>
-                                <label>{firstFile && firstFile.type} {firstFile && filesize(firstFile.size)}</label>
-                            </div>
-                        </div>
-                        <div className="col-sm-12 col-xs-6 col-md-6">
-                            <button onClick={() => { this.setState({ files: [], dragEntered: false }) }} type="button" className="btn btn-outline-danger btn-size-lg" style={{ height: '100%', minWidth: 100, float: 'right' }}>Kaldır</button>
-                        </div>
-                    </div>
+                    {multi ? this.renderMulti.call(this) : this.renderSingle.call(this, firstFile)}
                 </div>)}
                 <div style={{ position: 'absolute', transition: 'all 300ms ease', opacity: (isDragEntered ? 1 : 0), pointerEvents: 'none', left: 0, top: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.1)', backdropFilter: 'blur(5px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                     <i className="bi bi-mouse3 font-weight-bold text-dark" style={{ fontSize: '2rem' }}></i>
-                    <label className="font-weight-bold text-dark mt-3">Yüklemeyi tamamlamak için bu alana bırakınız.</label>
+                    <label className="font-weight-bold text-dark mt-3">{translate("IMAGEPICKER.DRAGDROP.MESSAGE")}</label>
                 </div>
             </div>
+            {description && <label className="text-muted font-italic mt-2 font-weight-bold" style={{ fontSize: '0.8rem' }}>{description}</label>}
         </div>;
     }
 
+    renderMulti() {
+        var files = this.state.files;
+        return <div>
+            <DragDropContext>
+                <Droppable droppableId={this.__id}>
+                    {(provided, snapshot) => (
+                        <div
+                            {...provided.droppableProps}
+                            ref={provided.innerRef}
+                            style={{ ...snapshot.isDraggingOver }}
+                        >
+                            {files.map((item, index) => (
+                                <Draggable key={item.id} draggableId={item.id} index={index}>
+                                    {(provided, snapshot) => (
+                                        <div
+                                            ref={provided.innerRef}
+                                            {...provided.draggableProps}
+                                            {...provided.dragHandleProps}
+                                            style={{ ...snapshot.isDragging }}
+                                        >
+                                            {this.renderSingle.call(this, item, true)}
+                                        </div>
+                                    )}
+                                </Draggable>
+                            ))}
+                            {provided.placeholder}
+                        </div>
+                    )}
+                </Droppable>
+            </DragDropContext>
+
+        </div>;
+    }
+
+    renderSingle(firstFile, compact) {
+        return <div className="row">
+            <div className="col-xs-12 col-sm-6 col-md-6" style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{
+                    width: 86, height: 86, borderRadius: 6, border: '1px solid rgba(0,0,0,0.1)',
+                    background: `url(${firstFile && firstFile.base64Data}) no-repeat`, backgroundPosition: 'center center', backgroundSize: 'contain'
+                }}></div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: 10 }}>
+                    <label style={{ fontWeight: 'bold', marginBottom: 3, maxWidth: 250 }}>{firstFile && firstFile.name}</label>
+                    <label>{firstFile && firstFile.type} {firstFile && filesize(firstFile.size)}</label>
+                </div>
+            </div>
+            <div className="col-sm-12 col-xs-6 col-md-6">
+                <button onClick={() => { this.setState({ files: this.state.files.filter((item) => item.index != firstFile.index), dragEntered: false }); }} type="button" className="btn btn-outline-danger btn-size-lg"
+                    style={{ height: compact ? 70 : '100%', minWidth: compact ? 70 : 100, float: 'right' }}><i className="bi bi-trash"></i>{translate('IMAGEPICKER.FILLED.REMOVE')}</button>
+            </div>
+        </div>;
+    }
 }
 

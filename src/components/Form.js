@@ -145,9 +145,11 @@ export class CustomField extends Component {
     }
     render() {
         var renderMode = "form";
-        var parentElement = this._reactInternalFiber && this._reactInternalFiber.return && this._reactInternalFiber.return.stateNode;
+        var internalFiber = this._reactInternalFiber || this._reactInternals;
+        if (!internalFiber) return <Fragment></Fragment>;
+        var parentElement = internalFiber.return && internalFiber.return.stateNode;
         if (!parentElement) return <Fragment></Fragment>;
-        parentElement = parentElement._reactInternalFiber.return;
+        parentElement = (parentElement._reactInternalFiber || parentElement._reactInternals).return;
         if (parentElement.elementType === 'tr' || parentElement.elementType === 'th' || parentElement.elementType === 'td') { renderMode = "grid"; }
         const hide = (this.props.hide || "").split(",");
         if (hide.indexOf("grid") > -1 && renderMode == "grid") {

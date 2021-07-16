@@ -10,6 +10,11 @@ import { TextField } from "./components/TextField"
 import { ButtonField } from './components/ButtonField'
 import FastApi from 'fastapi-express-client'
 import { ImagePickerField } from './components/ImagePicker';
+import ComboBoxField from './components/ComboBoxField';
+import { IDataSource, LocalDataSource, RemoteDataSource } from './DataSource';
+import TabControlField from './components/TabControlField';
+import RichTextField from './components/RichTextField';
+import TitleField from './components/TitleField';
 
 
 function InitializeFastUI({ translate, apiHandler, redisEnabled, corsEnabled }) {
@@ -31,17 +36,20 @@ function InitializeFastUI({ translate, apiHandler, redisEnabled, corsEnabled }) 
     corsEnabled
   };
   //Register fields
+  Field.register("title", TitleField);
   Field.register("text", TextField);
   Field.register("number", TextField);
   Field.register("email", TextField);
   Field.register("phone", TextField);
   Field.register("date", TextField);
   Field.register("time", TextField);
-  Field.register("datetime", TextField);
   Field.register("password", TextField);
   Field.register("button", ButtonField);
-
+  Field.register("combobox", ComboBoxField);
   Field.register("image-picker", ImagePickerField);
+  Field.register("richtext" , RichTextField);
+  
+  Field.register("tabcontrol", TabControlField);
 }
 
 
@@ -50,5 +58,8 @@ export {
   FastForm,
   FastGrid,
   Field,
-  TextField
+  TextField,
+  IDataSource,
+  LocalDataSource,
+  RemoteDataSource
 };

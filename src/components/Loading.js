@@ -7,11 +7,13 @@ import color from 'color';
 
 export default class Loading extends Component {
     componentDidMount() {
-        if(!this._reactInternalFiber) return;
+        var internalFiber = this._reactInternalFiber || this._reactInternals;
+        if(!internalFiber) return;
         
-        this.parentNode = this._reactInternalFiber.return.stateNode;
-        this.currentNode = this._reactInternalFiber.child.stateNode;
+        this.parentNode = internalFiber.return.stateNode;
+        this.currentNode = internalFiber.child.stateNode;
         this.parentNode.style.position = 'relative';
+        
 
         var computedParent = window.getComputedStyle(this.parentNode);
         this.currentNode.style.borderRadius = computedParent.borderRadius;
