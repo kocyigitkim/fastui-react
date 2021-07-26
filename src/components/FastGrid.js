@@ -425,7 +425,7 @@ class FastGridNewForm extends Component {
     }
     getFieldProps(name, onChange) {
         return {
-            datagrid: this.props.datagrid, value: this.state[name], onChange: (v) => {
+            datagrid: this.props.datagrid, name: name, value: this.state[name], onChange: (v) => {
                 if (v.checked) v = v.checked;
                 v = v.target ? v.target.value : v;
                 this.setState({ [name]: v });
