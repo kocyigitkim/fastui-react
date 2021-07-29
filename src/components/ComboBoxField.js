@@ -1,12 +1,12 @@
 import React, { Component } from 'react'
 import { IDataSource } from '../DataSource'
 import { chooseOne, translate } from '../utils';
-import { CustomField } from './Form'
+import { CustomField } from "./CustomField";
 import ReactSelect from 'react-select2-wrapper'
 import 'react-select2-wrapper/css/select2.min.css'
 
 var __rawStyleChild = global.window.document.createElement("style");
-__rawStyleChild.innerText = `span.select2-selection,.select2-container--default  .select2-selection__rendered,.select2-container--default  .select2-selection__arrow {height: calc(1.5em + 1.3rem + 2px);line-height: calc(1.5em + 1.3rem + 2px);}span.select2-selection .select2-selection__choice{max-height: calc(1.5em + 1.3rem - 4px);position: relative;top: 2px;line-height: initial !important;display: inline-flex;align-items: center;}`;
+__rawStyleChild.innerText = `span.select2-selection,.select2-container--default  .select2-selection__rendered,.select2-container--default  .select2-selection__arrow {height: calc(1.5em + 1.3rem + 2px) !important;line-height: calc(1.5em + 1.3rem + 2px) !important;}span.select2-selection .select2-selection__choice{max-height: calc(1.5em + 1.3rem - 4px) !important;position: relative;top: 2px;line-height: initial !important;display: inline-flex;align-items: center;}`;
 global.window.document.head.appendChild(__rawStyleChild);
 
 export default class ComboBoxField extends CustomField {

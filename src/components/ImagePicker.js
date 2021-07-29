@@ -1,5 +1,5 @@
 import React from 'react';
-import { CustomField } from './Form';
+import { CustomField } from "./CustomField";
 import { translate } from '../utils';
 import filesize from 'filesize'
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
