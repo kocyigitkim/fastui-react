@@ -15,9 +15,10 @@ import { IDataSource, LocalDataSource, RemoteDataSource } from './DataSource';
 import TabControlField from './components/TabControlField';
 import RichTextField from './components/RichTextField';
 import TitleField from './components/TitleField';
+import { PermissionBuilder } from './PermissionBuilder';
 
 
-function InitializeFastUI({ translate, apiHandler, redisEnabled, corsEnabled }) {
+function InitializeFastUI({ translate, apiHandler, redisEnabled, corsEnabled, permissionBuilder }) {
 
   if (!apiHandler) {
     apiHandler = new FastApi.FastApiClient();
@@ -29,11 +30,16 @@ function InitializeFastUI({ translate, apiHandler, redisEnabled, corsEnabled }) 
     apiHandler.setCors();
   }
 
+  if(!permissionBuilder){
+    permissionBuilder = new PermissionBuilder();
+  }
+
   global.window.fastui = {
     translate,
     apiHandler,
     redisEnabled,
-    corsEnabled
+    corsEnabled,
+    permissionBuilder
   };
   //Register fields
   Field.register("title", TitleField);

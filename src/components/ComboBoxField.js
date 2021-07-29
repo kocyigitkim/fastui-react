@@ -26,7 +26,7 @@ export default class ComboBoxField extends CustomField {
         const dataSource = this.getDataSource();
         if (!dataSource) return;
 
-        if (await dataSource.retrieve()) {
+        dataSource.onRetrieve.add(((sender, args) => {
             this.setState({
                 options: dataSource.records.map(item => ({
                     text: labelSelector(item),
@@ -34,13 +34,9 @@ export default class ComboBoxField extends CustomField {
                 })),
                 loading: false
             });
-        }
-        else {
-            this.setState({
-                options: [],
-                loading: false
-            });
-        }
+        }).bind(this));
+
+        await dataSource.retrieve();
     }
     /**
      * @returns {IDataSource}

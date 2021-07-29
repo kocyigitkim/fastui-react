@@ -54,10 +54,18 @@ export default class FastGrid extends Component {
         this.saveConfig();
     }
     async retrieveData() {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        this.setState({
-            data: this.props.data || []
-        });
+        var datasource = this.props.datasource;
+        if (datasource && datasource.retrieve) {
+            await datasource.retrieve();
+            this.setState({
+                data: datasource.records || []
+            });
+        }
+        else {
+            this.setState({
+                data: this.props.data || []
+            });
+        }
     }
     async refreshList() {
         this.setState({ loading: true, data: null });
@@ -197,9 +205,7 @@ export default class FastGrid extends Component {
             return <FastGridNewForm resetEdit={this.resetEdit.bind(this)} editData={this.state.mode === 'edit' && this.state.editData} {...this.props} api={this.extra} mode={this.state.mode} edit={this.props.edit} create={this.props.create} title={title} setMode={this.setMode.bind(this)} children={_children} datagrid={this} refresh={this.refreshList.bind(this)} setLoading={this.setLoading.bind(this)} />;
         }
 
-        if (isMobile) {
-            //      return <div>mobile view</div>;
-        }
+       
         return (
             <div className="card" style={{ borderRadius: 10, boxShadow: '0px 10px 25px rgba(0,0,0,0.1)' }}>
                 <Loading show={loading} />
@@ -226,7 +232,26 @@ export default class FastGrid extends Component {
                             }</div>}
                         </div>
                     </div>}
-                    <div className="table-responsive" style={{ minHeight: 200, overflow: 'visible' }}>
+
+                    {isMobile ? (<div>
+                        {filteredData.map((rowItem, index)=>{
+                             const dataId = keySelector(rowItem);
+                             const checkBox = checkboxEnabled && (this.renderCheck.call(this, dataId));
+                             const isChecked = checkBox && checkBox[1];
+                             return <tr className={isChecked && 'table-primary'}>
+                                 {checkBox && checkBox[0]}
+                                 {React.Children.map(_children, child => {
+                                     if (React.isValidElement(child)) {
+                                         return React.cloneElement(child, { data: rowItem, value: rowItem[child.props.name], datagrid: this });
+                                     }
+                                     return child;
+                                 }).map(item => <div className="container">{item}</div>)}
+                                 {
+                                     actions && <div className="row col-12 datagrid-cell">{actions.map((Item, index) => <div style={{ display: 'inline-block', margin: 2 }}><Item key={"kk" + index} datagrid={this} id={dataId} data={rowItem}></Item></div>)}</div>
+                                 }
+                             </tr>;
+                        })}
+                    </div>): ( <div className="table-responsive" style={{ minHeight: 200, overflow: 'visible' }}>
                         <table className="table table-hover">
                             <thead>
                                 <tr>
@@ -268,7 +293,8 @@ export default class FastGrid extends Component {
                             </tbody>
 
                         </table>
-                    </div>
+                    </div>)}
+
                     <div>
                         <div style={{ float: 'left' }}>
                             <label className="font-weight-bold font-size-xs text-muted">{translate("DATAGRID.STATUS.NRECORD").replace("%n%", rawData.length)}</label>
