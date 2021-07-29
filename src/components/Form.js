@@ -1,5 +1,5 @@
-import React, { Component, Fragment } from 'react'
-import { translate } from '../utils';
+import React, { Component } from 'react'
+import { chooseOne, getElevation, translate } from '../utils';
 import Loading from './Loading'
 
 export class FastForm extends Component {
@@ -48,13 +48,13 @@ export class FastForm extends Component {
     }
 
     render() {
-        const { title, loading, actions, headerActions, outlined, submit } = this.props;
-        const shadowConfig = "0px 10px 25px rgba(0,0,0,0.1)";
+        const { title, loading, actions, headerActions, outlined, submit, elevation, elevationColor } = this.props;
+        const shadowConfig = getElevation(chooseOne(elevation, 5), chooseOne(elevationColor, '#000'));
         return (
             <form ref={(r => this.frm = r)} method="post" >
-                <div className="card" style={{ boxShadow: outlined ? null : shadowConfig, overflow: 'hidden' }}>
+                <div className="card" style={{ borderRadius: 10, boxShadow: outlined ? null : shadowConfig, overflow: 'hidden' }}>
                     <Loading show={this.state.loading}>{translate(loading || "FORM.LOADING")}</Loading>
-                    {title && <div className="card-header">
+                    {(title || headerActions) && <div className="card-header">
                         <div style={{ display: 'flex' }}>
                             <h5 style={{ flex: 1 }} className="card-title">{translate(title)}</h5>
                             {headerActions && (<div>
@@ -127,46 +127,9 @@ FastForm.ActiveDeactive = class FastFormActiveDeactiveAction extends Component {
     render() {
         const { data } = this.props;
         const setState = () => {
-            data.IsActive = !Boolean(data.IsActive);
+            (data || {}).IsActive = !Boolean((data || {}).IsActive);
             this.forceUpdate();
         };
-        return <FastForm.CustomAction className="btn btn-outline-dark" title={`FORM.SET.${!data.IsActive ? 'ACTIVE' : 'DEACTIVE'}`} {...this.props} onClick={setState} style={{ padding: '7px 20px', ...this.props.style }}><i className={`bi bi-${!data.IsActive ? 'eye' : 'eye-slash'} mr-2`}></i></FastForm.CustomAction>;
-    }
-}
-
-export class CustomField extends Component {
-    grid() {
-        const { title, name } = this.props;
-        const translated = translate(title || name);
-        return <div>{translated}</div>;
-    }
-    form() {
-        return this.grid.call(this);
-    }
-    render() {
-        var renderMode = "form";
-        var internalFiber = this._reactInternalFiber || this._reactInternals;
-        if (!internalFiber) return <Fragment></Fragment>;
-        var parentElement = internalFiber.return && internalFiber.return.stateNode;
-        if (!parentElement) return <Fragment></Fragment>;
-        parentElement = (parentElement._reactInternalFiber || parentElement._reactInternals).return;
-        if (parentElement.elementType === 'tr' || parentElement.elementType === 'th' || parentElement.elementType === 'td') { renderMode = "grid"; }
-        const hide = (this.props.hide || "").split(",");
-        if (hide.indexOf("grid") > -1 && renderMode == "grid") {
-            return <Fragment></Fragment>;
-        }
-        return renderMode === 'form' ? this.form.call(this, this.props) : (this.grid.call(this, this.props));
-    }
-}
-
-export class Field extends Component {
-    static registry = {};
-    static register(name, component) {
-        Field.registry[name] = component;
-    }
-    render() {
-        const { type } = this.props;
-        const DynamicComponent = Field.registry[type] || Fragment;
-        return <DynamicComponent {...this.props}>{this.props.children}</DynamicComponent>;
+        return <FastForm.CustomAction className="btn btn-outline-dark" title={`FORM.SET.${!(data || {}).IsActive ? 'ACTIVE' : 'DEACTIVE'}`} {...this.props} onClick={setState} style={{ padding: '7px 20px', ...this.props.style }}><i className={`bi bi-${!(data || {}).IsActive ? 'eye' : 'eye-slash'} mr-2`}></i></FastForm.CustomAction>;
     }
 }

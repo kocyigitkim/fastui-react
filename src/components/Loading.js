@@ -8,12 +8,12 @@ import color from 'color';
 export default class Loading extends Component {
     componentDidMount() {
         var internalFiber = this._reactInternalFiber || this._reactInternals;
-        if(!internalFiber) return;
-        
+        if (!internalFiber) return;
+
         this.parentNode = internalFiber.return.stateNode;
         this.currentNode = internalFiber.child.stateNode;
         this.parentNode.style.position = 'relative';
-        
+
 
         var computedParent = window.getComputedStyle(this.parentNode);
         this.currentNode.style.borderRadius = computedParent.borderRadius;
@@ -23,7 +23,7 @@ export default class Loading extends Component {
 
         return (
             <div style={{ opacity: (this.props.show ? 1 : 0), pointerEvents: (this.props.show ? 'all' : 'none'), color: (this.props.color || 'black'), backgroundColor: backColor }} className={LoadingCSS.__react__loadingcontent}>
-                <div>
+                <div style={{ zIndex: 2, position: 'relative' }}>
                     <div style={{ display: 'block', display: 'flex', justifyContent: 'center', margin: 20 }}>
                         <Spinner radius={25} stroke={3} {...this.props} children={null}></Spinner>
                     </div>

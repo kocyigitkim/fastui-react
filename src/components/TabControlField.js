@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import { translate } from '../utils';
-import { CustomField } from './Form'
+import { CustomField } from "./CustomField";
 
 export default class TabControlField extends CustomField {
     state = {
@@ -17,7 +17,9 @@ export default class TabControlField extends CustomField {
         this.setState({ tabIndex: index });
     }
     render() {
-        const { vertical, filled, pages } = this.props;
+        const { vertical, filled } = this.props;
+        var pages = this.props.pages.filter(p=>p!==undefined && p!==null);
+        
         if (vertical === true) {
             return (
                 <div className="row">
@@ -34,6 +36,9 @@ export default class TabControlField extends CustomField {
                     <div className="col-xs-12 col-sm-12 col-md-9">
                         <div className="tab-content">
                             {pages.map((page, index) => {
+                                if(index !== this.state.tabIndex){
+                                    return <div></div>;
+                                }
                                 const TabContent = page.content;
                                 return (
                                     <div key={index} className={"tab-pane" + (index === this.state.tabIndex ? ' active' : '')} id={page.id}>

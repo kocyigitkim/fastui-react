@@ -2,7 +2,7 @@ import { CKEditor } from '@ckeditor/ckeditor5-react'
 import React, { Component } from 'react'
 import ClassicEditor from '@ckeditor/ckeditor5-build-classic'
 import './styles/RichText.css';
-import { CustomField } from './Form';
+import { CustomField } from "./CustomField";
 import { translate } from '../utils';
 
 var __rawStyleChild = global.window.document.createElement("style");

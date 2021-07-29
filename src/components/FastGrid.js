@@ -1,9 +1,10 @@
 import React, { Component, Fragment } from 'react'
-import { translate } from '../utils';
+import { chooseOne, getElevation, translate } from '../utils';
 import Styles from './styles/FastGrid.css'
 import Loading from './Loading'
 import { FastForm } from './Form'
 import { v4 as uuid } from 'uuid'
+import color from 'color'
 
 export default class FastGrid extends Component {
     state = {
@@ -147,7 +148,7 @@ export default class FastGrid extends Component {
         var actions = this.props.actions;
         const orderColumn = this.state.orderColumn;
         const orderState = this.state.orderState;
-        const showSort = this.state.sort;
+        const showSort = this.props.sort;
         const setOrder = (columnName) => {
             if (!showSort) return;
 
@@ -185,8 +186,9 @@ export default class FastGrid extends Component {
             });
         }
         var filteredData = data.slice(this.state.page * this.state.itemCount, Math.min(data.length, ((this.state.page + 1) * this.state.itemCount)));
-        const _children = (this.props.children.length > 0 ? this.props.children : [this.props.children]).filter((child) => {
-            if ((child.props.hide || "").indexOf("grid") > -1) {
+        const _children = (this.props && this.props.children && this.props.children.length > 0 ? this.props.children : [this.props.children]).filter((child) => {
+            if (!child) return false;
+            if ((child.props && child.props.hide || "").indexOf("grid") > -1) {
                 return false;
             }
             return true;
@@ -197,11 +199,12 @@ export default class FastGrid extends Component {
             return <FastGridNewForm resetEdit={this.resetEdit.bind(this)} editData={this.state.mode === 'edit' && this.state.editData} {...this.props} api={this.extra} mode={this.state.mode} edit={this.props.edit} create={this.props.create} title={title} setMode={this.setMode.bind(this)} children={_children} datagrid={this} refresh={this.refreshList.bind(this)} setLoading={this.setLoading.bind(this)} />;
         }
 
+        const elevation = chooseOne(this.props.elevation, 5);
         if (isMobile) {
             //      return <div>mobile view</div>;
         }
         return (
-            <div className="card" style={{ borderRadius: 10, boxShadow: '0px 10px 25px rgba(0,0,0,0.1)' }}>
+            <div className="card" style={{ marginBottom: 10, borderRadius: 10, boxShadow: getElevation(elevation, chooseOne(this.props.elevationColor, '#000')) }}>
                 <Loading show={loading} />
                 <div className="card-header" style={{ borderTopLeftRadius: 10, borderTopRightRadius: 10 }}>
                     <div>
@@ -337,8 +340,8 @@ class FastPagination extends Component {
         }
         if (page + 1 < pageCount) items.push([">>", pageCount - 1]);
         return <ul className="pagination" style={{ margin: 0 }}>{items.map(item => {
-            return <li key={"k" + item} className={`page-item ${item[1] === page ? 'active' : null}`}>
-                <button style={{ padding: 10 }} onClick={() => { setPage(item[1]) }} className="page-link">{item[0]}</button>
+            return <li style={{ margin: 5 }} key={"k" + item} className={`page-item ${item[1] === page ? 'active' : null}`}>
+                <button style={{ padding: 10 }} onClick={() => { setPage(item[1]) }} className="page-link" style={{ borderRadius: '100%', width: 36, height: 36, boxShadow: getElevation(item[1] === page ? 2 : 0) }}>{item[0]}</button>
             </li>;
         })}</ul>;
     }

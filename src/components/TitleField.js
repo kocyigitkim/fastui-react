@@ -1,9 +1,13 @@
 import React, { Component } from 'react'
+import { Fragment } from 'react';
 import { translate } from '../utils';
-import { CustomField } from './Form'
+import { CustomField } from "./CustomField";
 
 export default class TitleField extends CustomField {
-    render() {
+    grid() {
+        return <Fragment></Fragment>;
+    }
+    form() {
         const { title } = this.props;
         const translated = translate(title);
         return (
