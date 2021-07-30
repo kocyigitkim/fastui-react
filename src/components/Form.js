@@ -52,7 +52,7 @@ export class FastForm extends Component {
         const shadowConfig = getElevation(chooseOne(elevation, 5), chooseOne(elevationColor, '#000'));
         return (
             <form ref={(r => this.frm = r)} method="post" >
-                <div className="card" style={{ borderRadius: 10, boxShadow: outlined ? null : shadowConfig, overflow: 'hidden' }}>
+                <div className="card" style={{ borderRadius: 10, boxShadow: outlined ? null : shadowConfig }}>
                     <Loading show={this.state.loading}>{translate(loading || "FORM.LOADING")}</Loading>
                     {(title || headerActions) && <div className="card-header">
                         <div style={{ display: 'flex' }}>

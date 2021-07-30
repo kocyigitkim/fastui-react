@@ -18,7 +18,7 @@ export default class FastGrid extends Component {
         mode: 'grid',
         orderColumn: null,
         orderState: false, //false=ascending, true=descending
-        filters: [],
+        filters: {},
         editData: null
     };
     extra = {};
@@ -123,7 +123,7 @@ export default class FastGrid extends Component {
             <label className={`custom-control-label ${Styles['custom-control-label']}`} htmlFor={key} />
         </div>;
         if (id === null) return [<th>{component}</th>, isChecked];
-        else return [<td>{component}</td>, isChecked];
+        else return [<td>{component}</td>, isChecked, onChange];
     }
     keySelector() {
         return this.props.keySelector || ((data) => data.id || data.Id)
@@ -157,6 +157,12 @@ export default class FastGrid extends Component {
         const orderColumn = this.state.orderColumn;
         const orderState = this.state.orderState;
         const showSort = this.props.sort;
+        const setFilter = (fieldName, filter) => { this.setState({ filters: { ...this.state.filters, [fieldName]: filter } }); };
+        const resetFilter = (fieldName) => {
+            var filters = this.state.filters;
+            delete filters[fieldName];
+            this.setState({ filters: filters });
+        }
         const setOrder = (columnName) => {
             if (!showSort) return;
 
@@ -179,6 +185,18 @@ export default class FastGrid extends Component {
         const rawData = data;
         if (showSearch) {
             data = data.filter(customSearch.bind(this, this.state.searchText));
+        }
+        if (Object.keys(this.state.filters).length > 0) {
+            const filters = this.state.filters;
+            data = data.filter(row => {
+                for (var k in filters) {
+                    var v = filters[k];
+                    if (v.length === 0) continue;
+
+                    if (v.indexOf(row[k]) === -1) return false;
+                }
+                return true;
+            });
         }
         if (orderColumn) {
             data = data.sort((a, b) => {
@@ -207,9 +225,8 @@ export default class FastGrid extends Component {
             return <FastGridNewForm resetEdit={this.resetEdit.bind(this)} editData={this.state.mode === 'edit' && this.state.editData} {...this.props} api={this.extra} mode={this.state.mode} edit={this.props.edit} create={this.props.create} title={title} setMode={this.setMode.bind(this)} children={_children} datagrid={this} refresh={this.refreshList.bind(this)} setLoading={this.setLoading.bind(this)} />;
         }
 
-
         const elevation = chooseOne(this.props.elevation, 5);
- 
+
         return (
             <div className="card" style={{ marginBottom: 10, borderRadius: 10, boxShadow: getElevation(elevation, chooseOne(this.props.elevationColor, '#000')) }}>
                 <Loading show={loading} />
@@ -218,9 +235,9 @@ export default class FastGrid extends Component {
                         <h4 className="card-title">{title}</h4>
                     </div>
 
-                    <div style={{ display: 'flex' }}>
-                        <div style={{ flex: 1 }}>
-                            {showSearch && <FastGridSearchBox block style={{ maxWidth: 300 }} data={data} filteredData={filteredData} value={this.state.searchText} setValue={(v) => { this.setState({ searchText: v }) }}></FastGridSearchBox>}
+                    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row' }}>
+                        <div style={{ flex: 1, marginBottom: isMobile ? 10 : 0 }}>
+                            {showSearch && <FastGridSearchBox block style={{ maxWidth: isMobile ? '100%' : 300 }} data={data} filteredData={filteredData} value={this.state.searchText} setValue={(v) => { this.setState({ searchText: v }) }}></FastGridSearchBox>}
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                             {showCreate && <FastGridCreate {...this.props} setMode={this.setMode.bind(this)} />}
@@ -238,24 +255,31 @@ export default class FastGrid extends Component {
                     </div>}
 
                     {isMobile ? (<div>
-                        {filteredData.map((rowItem, index)=>{
-                             const dataId = keySelector(rowItem);
-                             const checkBox = checkboxEnabled && (this.renderCheck.call(this, dataId));
-                             const isChecked = checkBox && checkBox[1];
-                             return <tr className={isChecked && 'table-primary'}>
-                                 {checkBox && checkBox[0]}
-                                 {React.Children.map(_children, child => {
-                                     if (React.isValidElement(child)) {
-                                         return React.cloneElement(child, { data: rowItem, value: rowItem[child.props.name], datagrid: this });
-                                     }
-                                     return child;
-                                 }).map(item => <div className="container">{item}</div>)}
-                                 {
-                                     actions && <div className="row col-12 datagrid-cell">{actions.map((Item, index) => <div style={{ display: 'inline-block', margin: 2 }}><Item key={"kk" + index} datagrid={this} id={dataId} data={rowItem}></Item></div>)}</div>
-                                 }
-                             </tr>;
+                        {filteredData.map((rowItem, index) => {
+                            const dataId = keySelector(rowItem);
+                            const checkBox = checkboxEnabled && (this.renderCheck.call(this, dataId));
+                            const isChecked = checkBox && checkBox[1];
+                            return <div className={isChecked && 'table-primary'} style={{ padding: 10, borderBottom: '1px solid rgba(0,0,0,0.1)' }}>
+                                {checkBox && <div style={{ marginBottom: 10 }}>{checkBox[0]}</div>}
+                                {React.Children.map(_children, child => {
+                                    if (React.isValidElement(child)) {
+                                        return React.cloneElement(child, { data: rowItem, value: rowItem[child.props.name], datagrid: this });
+                                    }
+                                    return child;
+                                }).map(item => <div className="row">
+                                    <div className="col-6 font-weight-bold"> {translate(item.props.title || items.props.name)}</div>
+                                    <div className="col-6 datagrid-cell"> {item}</div>
+                                </div>)}
+                                {
+                                    actions && <div className="row col-12 datagrid-cell" style={{ justifyContent: 'flex-end' }}>
+                                        <label className="font-weight-bold">{translate("DATAGRID.ACTIONS")}</label>
+                                        <hr />
+                                        {actions.map((Item, index) => <div style={{ display: 'inline-block', margin: 2 }}><Item key={"kk" + index} datagrid={this} id={dataId} data={rowItem}></Item></div>)}
+                                    </div>
+                                }
+                            </div>;
                         })}
-                    </div>): ( <div className="table-responsive" style={{ minHeight: 200, overflow: 'visible' }}>
+                    </div>) : (<div className="table-responsive" style={{ minHeight: 200, overflow: 'visible' }}>
                         <table className="table table-hover">
                             <thead>
                                 <tr>
@@ -268,7 +292,7 @@ export default class FastGrid extends Component {
                                                 {orderColumn === name && (orderState ? (<i style={{ color: 'black', marginRight: 3 }} className="bi bi-sort-alpha-up"></i>) : (<i style={{ color: 'black', marginRight: 3 }} className="bi bi-sort-alpha-down"></i>))}
                                                 <div onClick={setOrder.bind(this, name)} style={{ flex: 1 }}>{translated}</div>
                                                 {showFilter && col.props.filter !== false && (
-                                                    <RenderFilter key={"kk" + index} col={col} data={data}></RenderFilter>
+                                                    <RenderFilter setFilter={setFilter} resetFilter={resetFilter} key={"kk" + index} isFiltered={Boolean(this.state.filters[col.props.name])} col={col} data={rawData}></RenderFilter>
                                                 )}
                                             </div>
                                         </th>;
@@ -281,7 +305,10 @@ export default class FastGrid extends Component {
                                     const dataId = keySelector(rowItem);
                                     const checkBox = checkboxEnabled && (this.renderCheck.call(this, dataId));
                                     const isChecked = checkBox && checkBox[1];
-                                    return <tr className={isChecked && 'table-primary'}>
+                                    return <tr className={isChecked && 'table-primary'} onClick={() => {
+
+                                        if (checkBox && checkBox.length === 3) checkBox[2]();
+                                    }}>
                                         {checkBox && checkBox[0]}
                                         {React.Children.map(_children, child => {
                                             if (React.isValidElement(child)) {
@@ -368,7 +395,7 @@ class FastPagination extends Component {
         if (page + 1 < pageCount) items.push([">>", pageCount - 1]);
         return <ul className="pagination" style={{ margin: 0 }}>{items.map(item => {
             return <li style={{ margin: 5 }} key={"k" + item} className={`page-item ${item[1] === page ? 'active' : null}`}>
-                <button style={{ padding: 10 }} onClick={() => { setPage(item[1]) }} className="page-link" style={{ borderRadius: '100%', width: 36, height: 36, boxShadow: getElevation(item[1] === page ? 2 : 0) }}>{item[0]}</button>
+                <button type="button" style={{ padding: 10 }} onClick={() => { setPage(item[1]) }} className="page-link" style={{ borderRadius: '100%', width: 36, height: 36, boxShadow: getElevation(item[1] === page ? 2 : 0) }}>{item[0]}</button>
             </li>;
         })}</ul>;
     }
@@ -410,10 +437,20 @@ class FastGridSearchBox extends Component {
         var found = (data || []).length;
         var foundTranslated = translate("DATAGRID.SEARCH.FOUND");
         var searchTitle = translate("DATAGRID.SEARCH.TITLE");
-        return <div style={{ display: block ? 'block' : 'inline-block', flex: 1 }}>
-            <input placeholder={searchTitle} style={{ maxWidth: 300, width: '100%', ...style }} className="form-control" type="text" value={this.props.value} onChange={(evt) => { this.props.setValue(evt.target.value) }} />
+        return <div className="input-group" style={{ display: block ? 'flex' : 'inline-flex', flex: 1 }}>
+            <div class="input-group-prepend">
+                <span class="input-group-text"><i className="bi bi-search"></i></span>
+            </div>
+            <input placeholder={searchTitle} style={{ flex: 1, ...style }} className="form-control" type="text" value={this.props.value} onChange={(evt) => { this.props.setValue(evt.target.value) }} />
+            {(this.props.value || "").trim().length > 0 && <div class="input-group-append">
+                <span class="input-group-text p-5" style={{ cursor: 'pointer' }} onClick={() => {
+                    this.props.setValue("");
+                }}><i className="bi bi-x text-dark" style={{ fontSize: '1.5rem' }}></i></span>
+            </div>}
             {found !== null && found !== undefined && (this.props.value || "").length > 0 ? (
-                <label className="text-muted font-weight-bold font-italic font-size-xs p-1 pt-3">{foundTranslated.replace("%n%", found)}</label>
+                <div>
+                    <label className="text-muted font-weight-bold font-italic font-size-xs p-1 pt-3">{foundTranslated.replace("%n%", found)}</label>
+                </div>
             ) : null
             }
         </div>
@@ -424,7 +461,7 @@ class FastGridCreate extends Component {
     render() {
 
         return <div>
-            <button onClick={() => { this.props.setMode('new') }} className="btn btn-primary"><i className="bi bi-plus"></i> {translate("DATAGRID.ACTION.CREATE")}</button>
+            <button type="button" onClick={() => { this.props.setMode('new') }} className="btn btn-primary"><i className="bi bi-plus"></i> {translate("DATAGRID.ACTION.CREATE")}</button>
         </div>
     }
 }
@@ -466,14 +503,13 @@ class FastGridNewForm extends Component {
     render() {
         const isEditMode = this.props.mode === 'edit';
         var Form = (isEditMode ? this.props.edit : this.props.create);
-        if (typeof Form === 'boolean') Form = null;
+        if (Form === true || Form === false) Form = null;
         const state = this.state;
-
         return <div>
             <FastForm title={translate(`DATAGRID.${isEditMode ? 'EDIT' : 'NEW'}.TITLE`).replace("%str%", this.props.title)} headerActions={[FastForm.Cancel]} actions={[FastForm.Save]} submit={this.submit.bind(this)}>
                 {(Form === null || Form === undefined) ? React.Children.map(this.props.children, child => {
                     var hideParts = (child.props.hide || "").split(",");
-                    if (hideParts.indexOf(isEditMode ? 'edit' : 'new') > -1) return <div></div>;
+                    if (hideParts.indexOf(this.props.mode) > -1) return <div></div>;
 
                     if (React.isValidElement(child)) {
                         return React.cloneElement(child, {
@@ -530,15 +566,16 @@ class RenderFilter extends Component {
 
         const selectedCount = this.state.selectedItems.length;
         const filterCount = rawFilterList.length;
+        const isFiltered = this.props.isFiltered && selectedCount > 0;
 
 
         return <div style={{ display: 'inline-block' }}>
 
 
             <div className={`dropdown ${isPopoverOpen ? 'show' : ''}`}>
-                <a type="button" data-toggle="dropdown" onClick={setIsPopoverToggle.bind(this)} href="#" style={{ borderRadius: 0, marginLeft: 2 }}>
+                <button type="button" data-toggle="dropdown" onClick={setIsPopoverToggle.bind(this)} style={{ borderRadius: 0, marginLeft: 2, userSelect: 'none', cursor: 'pointer', backgroundColor: isFiltered ? 'rgba(0,0,0,0.1)' : 'transparent', textShadow: isFiltered ? '0px 0px 1px black' : 'none', borderRadius: '100%', width: 24, height: 24, display: 'inline-flex', justifyContent: 'center', alignItems: 'center', border: 'none' }}>
                     <i className="bi bi-filter" style={{ color: 'black' }}></i>
-                </a>
+                </button>
                 <div className={`dropdown-menu ${isPopoverOpen ? 'show' : ''}`} aria-labelledby={this.id} style={{ padding: 5, minWidth: 300 }}>
                     <FastGridSearchBox data={filterList} block style={{ maxWidth: '100%', width: '100%' }} value={this.state.searchText} setValue={setSearchText} />
                     {selectedCount > 0 && <div className="alert alert-dark mt-3 p-4" style={{ borderRadius: 6, boxShadow: '0px 3px 10px rgba(0,0,0,0.15)' }}>
@@ -548,11 +585,10 @@ class RenderFilter extends Component {
                     </div>}
                     <div style={{ marginTop: 10, maxHeight: 250, height: 250, overflowY: 'scroll', padding: 3, overflowX: 'hidden' }}>
                         <div className="list-group">
-                            {filterList.filter((item, i) => i < 5000).map((item, index) => <button className="list-group-item list-group-item-action" style={{ margin: 0, display: 'flex', padding: 5 }}>
+                            {filterList.filter((item, i) => i < 5000).map((item, index) => <button type="button" className="list-group-item list-group-item-action" style={{ margin: 0, display: 'flex', padding: 5 }}>
 
                                 <div className="custom-control custom-checkbox" style={{ position: 'relative' }}>
-                                    <input type="checkbox" checked={this.state.selectedItems.indexOf(item) > -1} onChange={() => {
-                                        console.log(item);
+                                    <input type="checkbox" checked={this.state.selectedItems.indexOf(item) > -1} onChange={(evt) => {
                                         setSelectedItem(item);
                                     }} className="custom-control-input" id={"kkc" + item + this.id + index} />
                                     <label className={`custom-control-label ${Styles['custom-control-label']}`} htmlFor={"kkc" + item + this.id + index} />
@@ -564,8 +600,14 @@ class RenderFilter extends Component {
                         </div>
                     </div>
                     <div style={{ display: 'flex', marginTop: 5 }}>
-                        <button className="btn btn-primary" style={{ flex: 1, margin: 3 }}>{translate("DATAGRID.FILTER.APPLY")}</button>
-                        <button className="btn btn-outline-dark" style={{ flex: 1, margin: 3 }}>{translate("DATAGRID.FILTER.RESET")}</button>
+                        <button type="button" onClick={() => {
+                            this.props.setFilter(col.props.name, this.state.selectedItems);
+                            this.setState({ show: false });
+                        }} className="btn btn-primary" style={{ flex: 1, margin: 3 }}>{translate("DATAGRID.FILTER.APPLY")}</button>
+                        <button type="button" onClick={() => {
+                            this.props.resetFilter(col.props.name);
+                            this.setState({ show: false, selectedItems: [] });
+                        }} className="btn btn-outline-dark" style={{ flex: 1, margin: 3 }}>{translate("DATAGRID.FILTER.RESET")}</button>
                     </div>
                 </div>
             </div>

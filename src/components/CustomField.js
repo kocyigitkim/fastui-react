@@ -20,7 +20,7 @@ export class CustomField extends Component {
         if (!parentElement)
             return <Fragment></Fragment>;
         parentElement = (parentElement._reactInternalFiber || parentElement._reactInternals).return;
-        if (parentElement.elementType === 'tr' || parentElement.elementType === 'th' || parentElement.elementType === 'td') { renderMode = "grid"; }
+        if (parentElement.elementType === 'tr' || parentElement.elementType === 'th' || parentElement.elementType === 'td' || ((parentElement.pendingProps || {}).className || "").indexOf("datagrid-cell") > -1) { renderMode = "grid"; }
         const hide = (this.props.hide || "").split(",");
         if (hide.indexOf("grid") > -1 && renderMode == "grid") {
             return <Fragment></Fragment>;

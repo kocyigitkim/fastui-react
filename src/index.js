@@ -1,8 +1,9 @@
 import React, { Component } from 'react'
 import 'bootstrap-icons/font/bootstrap-icons.css'
-import 'rsuite/lib/styles/index.less';
+import JQUERY from 'jquery/dist/jquery.slim'
+
+import 'bootstrap/dist/js/bootstrap.bundle'
 import './styles.module.css'
-import PropTypes from 'prop-types'
 import Loading from './components/Loading'
 import { FastForm } from './components/Form'
 import { Field } from "./components/Field";
@@ -20,9 +21,14 @@ import { PermissionBuilder } from './PermissionBuilder';
 
 import ImageField from './components/ImageField';
 import * as PanelField from './components/PanelField';
+import MoneyField from './components/MoneyField';
 
 
 function InitializeFastUI({ translate, apiHandler, redisEnabled, corsEnabled, permissionBuilder }) {
+  global.window.jQuery = JQUERY;
+  global.jQuery = JQUERY;
+
+  require('bootstrap-select/dist/js/bootstrap-select');
 
   if (!apiHandler) {
     apiHandler = new FastApi.FastApiClient();
@@ -34,7 +40,7 @@ function InitializeFastUI({ translate, apiHandler, redisEnabled, corsEnabled, pe
     apiHandler.setCors();
   }
 
-  if(!permissionBuilder){
+  if (!permissionBuilder) {
     permissionBuilder = new PermissionBuilder();
   }
 
@@ -51,7 +57,7 @@ function InitializeFastUI({ translate, apiHandler, redisEnabled, corsEnabled, pe
   Field.register("number", TextField);
   Field.register("email", TextField);
   Field.register("phone", TextField);
-  Field.register("money", TextField);
+  Field.register("money", MoneyField);
   Field.register("date", TextField);
   Field.register("time", TextField);
   Field.register("username", TextField);
@@ -105,5 +111,6 @@ export {
   PanelField,
   IDataSource,
   LocalDataSource,
-  RemoteDataSource
+  RemoteDataSource,
+  Loading
 };

@@ -13,17 +13,15 @@ export default class App extends Component {
     });
   }
   render() {
-    return <div style={{ margin: 50 }}>
-      <FastGrid search filter checked sort create edit delete title="Hello World :)" datasource={new LocalDataSource([
-        {id: 1,firstname: "Muhammet", lastname: "Koçyiğit", username: "mkocyigit", "isactive": true},
-        {id: 2,firstname: "Seda Sıla", lastname: "Arslan", username: "sarslan", "isactive": true},
-        {id: 3,firstname: "Selman", lastname: "Şişman", username: "ssisman", "isactive": true}
-      ])}>
+    return <div>
+      <FastForm>
         <Field type="text" name="firstname" title="Ad" />
         <Field type="text" name="lastname" title="Soyad" />
         <Field type="text" name="username" title="Kullanıcı Adı" />
-        <Field type="text" name="isactive" title="Aktif Mi?" />
-      </FastGrid>
+        <Field type="money" name="money1" title="Para" currency="TRY" />
+        <Field type="money" name="money1" title="Para" currency="USD" />
+        <Field type="money" name="money1" title="Para" currency="EUR" />
+      </FastForm>
     </div>
     ;
   }
