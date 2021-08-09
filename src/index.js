@@ -18,11 +18,13 @@ import TabControlField from './components/TabControlField';
 import RichTextField from './components/RichTextField';
 import TitleField from './components/TitleField';
 import { PermissionBuilder } from './PermissionBuilder';
+import FastUIProvider from './components/FastUIProvider';
 
 import ImageField from './components/ImageField';
 import * as PanelField from './components/PanelField';
 import MoneyField from './components/MoneyField';
-
+import { translate, getApiHandler, getPermissionBuilder } from './utils'
+import { initPredefinedValidators, setValidator, validate, validateMultiple } from './validation';
 
 function InitializeFastUI({ translate, apiHandler, redisEnabled, corsEnabled, permissionBuilder }) {
   global.window.jQuery = JQUERY;
@@ -33,7 +35,10 @@ function InitializeFastUI({ translate, apiHandler, redisEnabled, corsEnabled, pe
   if (!apiHandler) {
     apiHandler = new FastApi.FastApiClient();
   }
-  if (apiHandler && apiHandler.setRedis && redisEnabled) {
+  if (apiHandler && redisEnabled) {
+    apiHandler.setSession(FastApi.FastApiSessionController.FastApiSession);
+  }
+  else {
     apiHandler.setSession(FastApi.FastApiSessionController.ExpressSession);
   }
   if (apiHandler && apiHandler.setCors && corsEnabled) {
@@ -49,8 +54,14 @@ function InitializeFastUI({ translate, apiHandler, redisEnabled, corsEnabled, pe
     apiHandler,
     redisEnabled,
     corsEnabled,
-    permissionBuilder
+    permissionBuilder,
+    validators: [],
+    validate: validate,
+    validateMultiple: validateMultiple
   };
+
+  initPredefinedValidators();
+
   //Register fields
   Field.register("title", TitleField);
   Field.register("text", TextField);
@@ -94,6 +105,44 @@ function registerCSS() {
 @keyframes bootstrap-load-ani{
   0%{opacity:0; transform: translateY(5px)}
 }
+
+.fastui-validation-error input{
+  border-color: rgba(255,0,0,0.7);
+  background-color: rgba(255,0,0,0.1);
+}
+
+.fastui-validation-success input{
+  border-color: rgba(0, 173, 0,0.7) !important;
+  background-color: rgba(0,173,0,0.1) !important;
+}
+
+.fastui-validation-error-message{
+  font-size:0.8rem;
+  color: maroon;
+  background-color:rgba(255,0,0,0.1);
+  margin-bottom: 10px;
+  border-left: 1px solid rgba(150,0,0,0.7);
+  padding: 10px;
+  animation: fastui-validation-error-message-ani 500ms 1 ease;
+}
+
+.fastui-validation-required {
+  font-size: 0.8rem;
+  font-weight: bold;
+  opacity: 0.75;
+  margin-bottom: 5px;
+  padding: 5px;
+  display: inline-block;
+  color: maroon;
+  animation: fastui-validation-error-message-ani 500ms 1 ease;
+}
+
+@keyframes fastui-validation-error-message-ani{
+  0%{
+      opacity:0;
+      transform: translateY(-5px);
+  }
+}
  `;
 
   var __rawStyleChild = global.window.document.createElement("style");
@@ -112,5 +161,11 @@ export {
   IDataSource,
   LocalDataSource,
   RemoteDataSource,
-  Loading
+  Loading,
+  translate,
+  setValidator,
+  validate,
+  getApiHandler,
+  getPermissionBuilder,
+  FastUIProvider
 };

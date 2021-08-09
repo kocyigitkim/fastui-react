@@ -4,6 +4,16 @@ import { translate } from '../utils';
 import filesize from 'filesize'
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { v4 as uuid } from 'uuid';
+import { ReactBridge } from '../ReactBridge';
+
+const reorder = (list, startIndex, endIndex) => {
+    const result = Array.from(list);
+    const [removed] = result.splice(startIndex, 1);
+    result.splice(endIndex, 0, removed);
+
+    return result;
+};
+
 
 export class ImagePickerField extends CustomField {
     state = {
@@ -103,10 +113,28 @@ export class ImagePickerField extends CustomField {
         </div>;
     }
 
+    onDragEnd(result) {
+
+        // dropped outside the list
+        if (!result.destination) {
+            return;
+        }
+
+        const items = reorder(
+            this.state.files,
+            result.source.index,
+            result.destination.index
+        );
+
+        this.setState({
+            files: items
+        });
+    }
+
     renderMulti() {
         var files = this.state.files;
-        return <div>
-            <DragDropContext>
+        return <ReactBridge ref={r => this.multiBridge = r}>
+            <DragDropContext onDragEnd={this.onDragEnd.bind(this)}>
                 <Droppable droppableId={this.__id}>
                     {(provided, snapshot) => (
                         <div
@@ -121,7 +149,7 @@ export class ImagePickerField extends CustomField {
                                             ref={provided.innerRef}
                                             {...provided.draggableProps}
                                             {...provided.dragHandleProps}
-                                            style={{ ...snapshot.isDragging }}
+                                            style={{ ...snapshot.isDragging, ...provided.draggableProps.style }}
                                         >
                                             {this.renderSingle.call(this, item, true)}
                                         </div>
@@ -133,8 +161,7 @@ export class ImagePickerField extends CustomField {
                     )}
                 </Droppable>
             </DragDropContext>
-
-        </div>;
+        </ReactBridge>;
     }
 
     renderSingle(firstFile, compact) {

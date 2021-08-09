@@ -136,7 +136,7 @@ export default class FastGrid extends Component {
     setMode(v) {
         this.setState({
             mode: v
-        });
+        }, v === 'grid' ? this.retrieveData.bind(this) : null);
     }
     resetEdit() {
         this.setState({
@@ -157,6 +157,7 @@ export default class FastGrid extends Component {
         const orderColumn = this.state.orderColumn;
         const orderState = this.state.orderState;
         const showSort = this.props.sort;
+        const idSelector = this.props.idSelector || "Id";
         const setFilter = (fieldName, filter) => { this.setState({ filters: { ...this.state.filters, [fieldName]: filter } }); };
         const resetFilter = (fieldName) => {
             var filters = this.state.filters;
@@ -222,7 +223,7 @@ export default class FastGrid extends Component {
         const checkedItemCount = this.state.checkedList[0] === '-1' ? (rawData.length) : this.state.checkedList.length;
 
         if (this.state.mode === "new" || this.state.mode === "edit") {
-            return <FastGridNewForm resetEdit={this.resetEdit.bind(this)} editData={this.state.mode === 'edit' && this.state.editData} {...this.props} api={this.extra} mode={this.state.mode} edit={this.props.edit} create={this.props.create} title={title} setMode={this.setMode.bind(this)} children={_children} datagrid={this} refresh={this.refreshList.bind(this)} setLoading={this.setLoading.bind(this)} />;
+            return <FastGridNewForm idSelector={idSelector} path={this.props.path} resetEdit={this.resetEdit.bind(this)} editData={this.state.mode === 'edit' && this.state.editData} {...this.props} api={this.extra} mode={this.state.mode} edit={this.props.edit} create={this.props.create} title={title} setMode={this.setMode.bind(this)} children={_children} datagrid={this} refresh={this.refreshList.bind(this)} setLoading={this.setLoading.bind(this)} />;
         }
 
         const elevation = chooseOne(this.props.elevation, 5);
@@ -305,10 +306,9 @@ export default class FastGrid extends Component {
                                     const dataId = keySelector(rowItem);
                                     const checkBox = checkboxEnabled && (this.renderCheck.call(this, dataId));
                                     const isChecked = checkBox && checkBox[1];
-                                    return <tr className={isChecked && 'table-primary'} onClick={() => {
+                                    //onClick={() => {if (checkBox && checkBox.length === 3) checkBox[2]();}}
 
-                                        if (checkBox && checkBox.length === 3) checkBox[2]();
-                                    }}>
+                                    return <tr className={isChecked && 'table-primary'} >
                                         {checkBox && checkBox[0]}
                                         {React.Children.map(_children, child => {
                                             if (React.isValidElement(child)) {
@@ -438,8 +438,8 @@ class FastGridSearchBox extends Component {
         var foundTranslated = translate("DATAGRID.SEARCH.FOUND");
         var searchTitle = translate("DATAGRID.SEARCH.TITLE");
         return <div className="input-group" style={{ display: block ? 'flex' : 'inline-flex', flex: 1 }}>
-            <div class="input-group-prepend">
-                <span class="input-group-text"><i className="bi bi-search"></i></span>
+            <div className="input-group-prepend">
+                <span className="input-group-text"><i className="bi bi-search"></i></span>
             </div>
             <input placeholder={searchTitle} style={{ flex: 1, ...style }} className="form-control" type="text" value={this.props.value} onChange={(evt) => { this.props.setValue(evt.target.value) }} />
             {(this.props.value || "").trim().length > 0 && <div class="input-group-append">
@@ -473,6 +473,11 @@ class FastGridNewForm extends Component {
         super(props);
         this.state = { ...this.state, ...props.editData };
     }
+    componentDidMount() {
+        if (this.props.editData) {
+            this.setState(this.props.editData);
+        }
+    }
     submit(ctx) {
         if (ctx.action === 'cancel') {
             this.props.setMode('grid');
@@ -500,13 +505,18 @@ class FastGridNewForm extends Component {
             }
         };
     }
+    onSave(response) {
+        if (response.success === true) {
+            this.props.setMode("grid");
+        }
+    }
     render() {
         const isEditMode = this.props.mode === 'edit';
         var Form = (isEditMode ? this.props.edit : this.props.create);
         if (Form === true || Form === false) Form = null;
         const state = this.state;
         return <div>
-            <FastForm title={translate(`DATAGRID.${isEditMode ? 'EDIT' : 'NEW'}.TITLE`).replace("%str%", this.props.title)} headerActions={[FastForm.Cancel]} actions={[FastForm.Save]} submit={this.submit.bind(this)}>
+            <FastForm editId={this.props.editData && this.props.editData[this.props.idSelector || "Id"]} onSave={this.onSave.bind(this)} path={this.props.path} title={translate(`DATAGRID.${isEditMode ? 'EDIT' : 'NEW'}.TITLE`).replace("%str%", this.props.title)} headerActions={[FastForm.Cancel]} actions={[FastForm.Save]} submit={this.submit.bind(this)}>
                 {(Form === null || Form === undefined) ? React.Children.map(this.props.children, child => {
                     var hideParts = (child.props.hide || "").split(",");
                     if (hideParts.indexOf(this.props.mode) > -1) return <div></div>;
