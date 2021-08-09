@@ -5,6 +5,7 @@ import Loading from './Loading'
 import { FastForm } from './Form'
 import { v4 as uuid } from 'uuid'
 import color from 'color'
+import toast from 'react-hot-toast';
 
 export default class FastGrid extends Component {
     state = {
@@ -438,18 +439,18 @@ class FastGridSearchBox extends Component {
         var foundTranslated = translate("DATAGRID.SEARCH.FOUND");
         var searchTitle = translate("DATAGRID.SEARCH.TITLE");
         return <div className="input-group" style={{ display: block ? 'flex' : 'inline-flex', flex: 1 }}>
-            <div className="input-group-prepend">
+            <div className="input-group-prepend" style={{display: 'block'}}>
                 <span className="input-group-text"><i className="bi bi-search"></i></span>
             </div>
             <input placeholder={searchTitle} style={{ flex: 1, ...style }} className="form-control" type="text" value={this.props.value} onChange={(evt) => { this.props.setValue(evt.target.value) }} />
-            {(this.props.value || "").trim().length > 0 && <div class="input-group-append">
-                <span class="input-group-text p-5" style={{ cursor: 'pointer' }} onClick={() => {
+            {(this.props.value || "").trim().length > 0 && <div class="input-group-append"  style={{display: 'block', maxHeight: 30}}>
+                <span class="input-group-text" style={{ cursor: 'pointer', padding: '0px 5px' }} onClick={() => {
                     this.props.setValue("");
                 }}><i className="bi bi-x text-dark" style={{ fontSize: '1.5rem' }}></i></span>
             </div>}
             {found !== null && found !== undefined && (this.props.value || "").length > 0 ? (
                 <div>
-                    <label className="text-muted font-weight-bold font-italic font-size-xs p-1 pt-3">{foundTranslated.replace("%n%", found)}</label>
+                    <label className="text-muted font-weight-bold font-italic font-size-xs p-1 pt-3" style={{fontSize: '0.7rem'}}>{foundTranslated.replace("%n%", found)}</label>
                 </div>
             ) : null
             }
@@ -506,7 +507,7 @@ class FastGridNewForm extends Component {
         };
     }
     onSave(response) {
-        if (response.success === true) {
+        if (response && response.success === true) {
             this.props.setMode("grid");
         }
     }

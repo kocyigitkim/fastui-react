@@ -8,7 +8,7 @@ export default class FastUIProvider extends Component {
         return (
             <ReactBridge>
                 <Suspense fallback={() => null}>
-                 <Toaster position="top-center" reverseOrder={false} />)
+                 <Toaster position="top-center" reverseOrder={false} />
                  </Suspense>
                 {this.props.children}
             </ReactBridge>
