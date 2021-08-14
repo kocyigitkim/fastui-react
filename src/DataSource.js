@@ -1,6 +1,5 @@
-import FastState from 'faststate-react';
 import { EventBuilder } from './EventBuilder';
-export class IDataSource extends FastState {
+export class IDataSource {
     records = [];
     onRetrieve = new EventBuilder();
     get count() {

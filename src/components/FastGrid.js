@@ -396,7 +396,7 @@ class FastPagination extends Component {
         if (page + 1 < pageCount) items.push([">>", pageCount - 1]);
         return <ul className="pagination" style={{ margin: 0 }}>{items.map(item => {
             return <li style={{ margin: 5 }} key={"k" + item} className={`page-item ${item[1] === page ? 'active' : null}`}>
-                <button type="button" style={{ padding: 10 }} onClick={() => { setPage(item[1]) }} className="page-link" style={{ borderRadius: '100%', width: 36, height: 36, boxShadow: getElevation(item[1] === page ? 2 : 0) }}>{item[0]}</button>
+                <button type="button" style={{ padding: 10 }} onClick={() => { setPage(item[1]) }} className="page-link" style={{  boxShadow: getElevation(item[1] === page ? 2 : 0) }}>{item[0]}</button>
             </li>;
         })}</ul>;
     }
@@ -440,11 +440,11 @@ class FastGridSearchBox extends Component {
         var searchTitle = translate("DATAGRID.SEARCH.TITLE");
         return <div className="input-group" style={{ display: block ? 'flex' : 'inline-flex', flex: 1 }}>
             <div className="input-group-prepend" style={{display: 'block'}}>
-                <span className="input-group-text"><i className="bi bi-search"></i></span>
+                <span className="input-group-text" style={{height:'100%'}}><i className="bi bi-search"></i></span>
             </div>
-            <input placeholder={searchTitle} style={{ flex: 1, ...style }} className="form-control" type="text" value={this.props.value} onChange={(evt) => { this.props.setValue(evt.target.value) }} />
-            {(this.props.value || "").trim().length > 0 && <div class="input-group-append"  style={{display: 'block', maxHeight: 30}}>
-                <span class="input-group-text" style={{ cursor: 'pointer', padding: '0px 5px' }} onClick={() => {
+            <input placeholder={searchTitle} style={{ flex: 1, ...style, height: 44 }} className="form-control" type="text" value={this.props.value} onChange={(evt) => { this.props.setValue(evt.target.value) }} />
+            {(this.props.value || "").trim().length > 0 && <div class="input-group-append"  style={{display: 'block'}}>
+                <span class="input-group-text" style={{ cursor: 'pointer', padding: '0px 5px', height:'100%' }} onClick={() => {
                     this.props.setValue("");
                 }}><i className="bi bi-x text-dark" style={{ fontSize: '1.5rem' }}></i></span>
             </div>}
