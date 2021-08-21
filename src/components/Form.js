@@ -33,12 +33,12 @@ export class FastForm extends Component {
         const api = getApiHandler();
         var response = await api.execute(this.props.path, action, request, "POST");
         await new Promise(resolve => setTimeout(resolve, 1000));
-        if(!response ||response.success===false){
+        if (!response || response.success === false) {
             var errMessage = translate(response ? response.message : 'FORM.SAVE.ERROR');
             toast.error(errMessage);
         }
-        else{
-            if(response && response.success){
+        else {
+            if (response && response.success) {
                 toast.success(translate('FORM.SAVE.SUCCESS'));
             }
         }
@@ -158,6 +158,7 @@ FastForm.CustomAction = class FastFormCustomAction extends Component {
     render() {
         const { title, action } = this.props;
         const translated = translate(title);
+        console.log(translated, this);
         return <div style={{ display: 'contents' }}>
             <button {...{ ...this.props, form: null, title: translated }} type="button" onClick={this.props.onClick}>{this.props.children}{translated}</button>
         </div>;
@@ -194,13 +195,75 @@ FastForm.Edit = class FastFormEditAction extends Component {
 
 
 FastForm.ActiveDeactive = class FastFormActiveDeactiveAction extends Component {
-    static action = 'delete';
+    static action = 'setstate';
+    isActive = false;
+    constructor(props) {
+        super(props);
+
+    }
+    componentDidMount() {
+        this.update.call(this);
+    }
+    componentDidUpdate() {
+        this.update.call(this);
+    }
+    update() {
+        const props = this.props;
+        if (props.data && (props.data.IsActive || props.data.isActive)) {
+            this.isActive = true;
+        }
+        else if (Array.isArray(props.data) && props.data.filter(p => p.IsActive || p.isActive).length > 0) {
+            this.isActive = true;
+        }
+    }
     render() {
-        const { data } = this.props;
-        const setState = () => {
-            (data || {}).IsActive = !Boolean((data || {}).IsActive);
-            this.forceUpdate();
+        const { data, idField, ids } = this.props;
+        const setState = async () => {
+            if (this.props.datagrid) {
+                const apiHandler = getApiHandler();
+                var errorCount = 0, successCount = 0;
+                this.isActive = !this.isActive;
+                for (var id of ids) {
+                    var result = await apiHandler.execute(this.props.datagrid.props.path, "setState", {
+                        [idField]: id,
+                        value: this.isActive
+                    }, "post");
+                    if ((result && result.success === false) || !result) {
+                        errorCount++;
+                    }
+                    else {
+                        successCount++;
+                    }
+                }
+
+                if (successCount > 0 && errorCount === 0) {
+                    toast.success(translate("FORM.SAVE.SUCCESS"));
+                }
+                else if (errorCount > 0 && successCount === 0) {
+                    toast.error(translate("FORM.SAVE.ERROR"));
+                }
+                else {
+                    toast.warning(translate("FORM.SAVE.WARNING"));
+                }
+            }
+            else {
+                if (ids.length === 1) {
+                    (data || {}).IsActive = !Boolean((data || {}).IsActive);
+                }
+            }
+            if (ids.length > 0) {
+                if (data && Array.isArray(data)) {
+                    data.filter(p => ids.indexOf(p[idField]) > -1).forEach(p => p.IsActive = this.isActive);
+                } else if (data) {
+                    data.IsActive = this.isActive;
+                }
+            }
+            else {
+                if (data) this.isActive = data.IsActive;
+            }
+            await this.props.datagrid.refreshList();
         };
-        return <FastForm.CustomAction className="btn btn-outline-dark" title={`FORM.SET.${!(data || {}).IsActive ? 'ACTIVE' : 'DEACTIVE'}`} {...this.props} onClick={setState} style={{ padding: '7px 20px', ...this.props.style }}><i className={`bi bi-${!(data || {}).IsActive ? 'eye' : 'eye-slash'} mr-2`}></i></FastForm.CustomAction>;
+        const IsActive = this.isActive;
+        return <FastForm.CustomAction className="btn btn-outline-dark" title={`FORM.SET.${!IsActive ? 'ACTIVE' : 'DEACTIVE'}`} {...this.props} onClick={setState} style={{ padding: '7px 20px', ...this.props.style }}><i className={`bi bi-${!IsActive ? 'eye' : 'eye-slash'} mr-2`}></i></FastForm.CustomAction>;
     }
 }

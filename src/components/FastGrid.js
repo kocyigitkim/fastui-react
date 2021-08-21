@@ -6,6 +6,7 @@ import { FastForm } from './Form'
 import { v4 as uuid } from 'uuid'
 import color from 'color'
 import toast from 'react-hot-toast';
+import { Switch } from 'react-router-dom';
 
 export default class FastGrid extends Component {
     state = {
@@ -26,24 +27,25 @@ export default class FastGrid extends Component {
     constructor(props) {
         super(props);
         this.state.mode = props.defaultMode || "grid";
+        this.applyLocalFilter = this.applyLocalFilter.bind(this);
     }
     saveConfig() {
         window.localStorage.setItem(this.__id, JSON.stringify({ itemCount: this.state.itemCount }));
     }
     componentDidMount() {
-        const key = `fastgrid-${this.props.title}-${this.props.class}-${this.props.hash}`;
+        const key = `fastgrid-${this.props.title}-${this.props.path}-${this.props.hash}`;
         this.__id = key;
 
-        this.extra.retrievePath = `${this.props.class}/retrieve`;
-        this.extra.createPath = `${this.props.class}/create`;
-        this.extra.editPath = `${this.props.class}/edit`;
-        this.extra.deletePath = `${this.props.class}/delete`;
-        this.extra.getPath = ((action) => (`${this.props.class}/${action}`)).bind(this);
+        this.extra.retrievePath = `${this.props.path}/retrieve`;
+        this.extra.createPath = `${this.props.path}/create`;
+        this.extra.editPath = `${this.props.path}/edit`;
+        this.extra.deletePath = `${this.props.path}/delete`;
+        this.extra.getPath = ((action) => (`${this.props.path}/${action}`)).bind(this);
         this.extra.execute = async (path, ...args) => {
             var parts = path.split("/");
             var className = parts[0];
             var actionName = parts[1];
-            return await global.window.fastui.apiHandler.execute.bind(global.window.fastui.apiHandler, className, actionName, ...args).catch(console.error);
+            return await global.window.fastui.apiHandler.execute.call(global.window.fastui.apiHandler, className, actionName, ...args).catch(console.error);
         };
 
         var lastConfig = JSON.parse(window.localStorage.getItem(key));
@@ -55,18 +57,78 @@ export default class FastGrid extends Component {
     componentDidUpdate() {
         this.saveConfig();
     }
+    applyLocalFilter(data) {
+        const orderColumn = this.state.orderColumn;
+        const orderState = this.state.orderState;
+        const showSearch = this.props.search;
+        const customSearch = this.props.customSearch || this.defaultSearchMethod;
+
+        if (!data) data = this.state.data || [];
+        if (showSearch) {
+            data = data.filter(customSearch.bind(this, this.state.searchText));
+        }
+        if (Object.keys(this.state.filters).length > 0) {
+            const filters = this.state.filters;
+            data = data.filter(row => {
+                for (var k in filters) {
+                    var v = filters[k];
+                    if (v.length === 0) continue;
+
+                    if (v.indexOf(row[k]) === -1) return false;
+                }
+                return true;
+            });
+        }
+        if (orderColumn) {
+            data = data.sort((a, b) => {
+                var vA = a[orderColumn];//(a[orderColumn] || "").toString();
+                var vB = b[orderColumn];//(b[orderColumn] || "").toString();
+                var sign = vA > vB ? 1 : (vA < vB ? -1 : 0);
+                return orderState ? (sign * -1) : sign;
+            });
+        }
+        if (this.state.page * this.state.itemCount > data.length) {
+            this.setState({
+                page: 0
+            });
+        }
+        var filteredData = data.slice(this.state.page * this.state.itemCount, Math.min(data.length, ((this.state.page + 1) * this.state.itemCount)));
+        console.log(this, data, filteredData);
+        this.setState({
+            filtered: {
+                filteredData,
+                data
+            }
+        });
+    }
     async retrieveData() {
         var datasource = this.props.datasource;
         if (datasource && datasource.retrieve) {
+            datasource.args = {
+                pagination: {
+                    page: this.state.page,
+                    itemCount: this.state.itemCount
+                },
+                filter: this.state.filters,
+                searchText: this.state.searchText,
+                sort: {
+                    column: this.state.orderColumn,
+                    state: this.state.orderState
+                }
+            };
             await datasource.retrieve();
             this.setState({
-                data: datasource.records || []
+                data: []   
+            }, ()=>{
+                this.setState({
+                    data: datasource.records || []
+                }, this.applyLocalFilter.bind(this, datasource.records || []));
             });
         }
         else {
             this.setState({
                 data: this.props.data || []
-            });
+            }, this.applyLocalFilter.bind(this, this.props.data || []));
         }
     }
     async refreshList() {
@@ -137,7 +199,7 @@ export default class FastGrid extends Component {
     setMode(v) {
         this.setState({
             mode: v
-        }, v === 'grid' ? this.retrieveData.bind(this) : null);
+        }, v === 'grid' ? this.refreshList.bind(this) : null);
     }
     resetEdit() {
         this.setState({
@@ -147,7 +209,10 @@ export default class FastGrid extends Component {
     render() {
         const title = translate(this.props.title);
         const pageSizes = this.props.pageSizes || [10, 20, 50, 100];
-        var data = this.state.data || [];
+        var data = (this.state.filtered && this.state.filtered.data) || [];
+        var rawData = this.state.data || [];
+        var filteredData = (this.state.filtered && this.state.filtered.filteredData) || [];
+
         const showSearch = this.props.search;
         const customSearch = this.props.customSearch || this.defaultSearchMethod;
         const isMobile = this.state.isMobile;
@@ -159,11 +224,11 @@ export default class FastGrid extends Component {
         const orderState = this.state.orderState;
         const showSort = this.props.sort;
         const idSelector = this.props.idSelector || "Id";
-        const setFilter = (fieldName, filter) => { this.setState({ filters: { ...this.state.filters, [fieldName]: filter } }); };
+        const setFilter = (fieldName, filter) => { this.setState({ filters: { ...this.state.filters, [fieldName]: filter } }, this.refreshList.bind(this)); };
         const resetFilter = (fieldName) => {
             var filters = this.state.filters;
             delete filters[fieldName];
-            this.setState({ filters: filters });
+            this.setState({ filters: filters }, this.refreshList.bind(this));
         }
         const setOrder = (columnName) => {
             if (!showSort) return;
@@ -171,7 +236,7 @@ export default class FastGrid extends Component {
             this.setState({
                 orderColumn: columnName,
                 orderState: this.state.orderColumn === columnName ? (!this.state.orderState) : false
-            });
+            }, this.refreshList.bind(this));
         };
         if (this.props.edit) {
             actions = [...(actions ?? []), (props) => (<FastForm.Edit onClick={() => {
@@ -184,36 +249,6 @@ export default class FastGrid extends Component {
         const multiActions = this.props.multiActions;
         const keySelector = this.keySelector.call(this);
         const checkboxEnabled = this.props.checked !== null && this.props.checked !== undefined ? Boolean(this.props.checked) : false;
-        const rawData = data;
-        if (showSearch) {
-            data = data.filter(customSearch.bind(this, this.state.searchText));
-        }
-        if (Object.keys(this.state.filters).length > 0) {
-            const filters = this.state.filters;
-            data = data.filter(row => {
-                for (var k in filters) {
-                    var v = filters[k];
-                    if (v.length === 0) continue;
-
-                    if (v.indexOf(row[k]) === -1) return false;
-                }
-                return true;
-            });
-        }
-        if (orderColumn) {
-            data = data.sort((a, b) => {
-                var vA = a[orderColumn];//(a[orderColumn] || "").toString();
-                var vB = b[orderColumn];//(b[orderColumn] || "").toString();
-                var sign = vA > vB ? 1 : (vA < vB ? -1 : 0);
-                return orderState ? (sign * -1) : sign;
-            });
-        }
-        if (this.state.page * this.state.itemCount > data.length) {
-            this.setState({
-                page: 0
-            });
-        }
-        var filteredData = data.slice(this.state.page * this.state.itemCount, Math.min(data.length, ((this.state.page + 1) * this.state.itemCount)));
         const _children = (this.props && this.props.children && this.props.children.length > 0 ? this.props.children : [this.props.children]).filter((child) => {
             if (!child) return false;
             if ((child.props && child.props.hide || "").indexOf("grid") > -1) {
@@ -229,127 +264,128 @@ export default class FastGrid extends Component {
 
         const elevation = chooseOne(this.props.elevation, 5);
 
-        return (
-            <div className="card" style={{ marginBottom: 10, borderRadius: 10, boxShadow: getElevation(elevation, chooseOne(this.props.elevationColor, '#000')) }}>
-                <Loading show={loading} />
-                <div className="card-header" style={{ borderTopLeftRadius: 10, borderTopRightRadius: 10 }}>
-                    <div>
-                        <h4 className="card-title">{title}</h4>
-                    </div>
+        return (<div className="card" style={{ marginBottom: 10, borderRadius: 10, boxShadow: getElevation(elevation, chooseOne(this.props.elevationColor, '#000')) }}>
+            <Loading show={loading} />
+            <div className="card-header" style={{ borderTopLeftRadius: 10, borderTopRightRadius: 10 }}>
+                <div>
+                    <h4 className="card-title">{title}</h4>
+                </div>
 
-                    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row' }}>
-                        <div style={{ flex: 1, marginBottom: isMobile ? 10 : 0 }}>
-                            {showSearch && <FastGridSearchBox block style={{ maxWidth: isMobile ? '100%' : 300 }} data={data} filteredData={filteredData} value={this.state.searchText} setValue={(v) => { this.setState({ searchText: v }) }}></FastGridSearchBox>}
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                            {showCreate && <FastGridCreate {...this.props} setMode={this.setMode.bind(this)} />}
-                        </div>
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row' }}>
+                    <div style={{ flex: 1, marginBottom: isMobile ? 10 : 0 }}>
+                        {showSearch && <FastGridSearchBox block style={{ maxWidth: isMobile ? '100%' : 300 }} data={data} filteredData={filteredData} value={this.state.searchText} setValue={(v) => { this.setState({ searchText: v }) }}></FastGridSearchBox>}
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        {showCreate && <FastGridCreate {...this.props} setMode={this.setMode.bind(this)} />}
                     </div>
                 </div>
-                <div className="card-body">
-                    {checkedItemCount > 0 && <div className="alert alert-dark mt-3 p-4" style={{ borderRadius: 6, boxShadow: '0px 3px 10px rgba(0,0,0,0.15)' }}>
-                        <div className="row">
-                            <div className="col" dangerouslySetInnerHTML={{ __html: translate("DATAGRID.SELECTED.NRECORD").replace("%n%", checkedItemCount) }} ></div>
-                            {multiActions && <div className="mr-2 p-1" style={{ backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 10 }}>{
-                                multiActions.map((Item, index) => <div key={"kk" + index} style={{ margin: 2, display: 'inline-block' }}><Item datagrid={this} ids={this.state.checkedList} data={(this.state.data || [])}></Item></div>)
-                            }</div>}
-                        </div>
-                    </div>}
+            </div>
+            <div className="card-body">
+                {checkedItemCount > 0 && <div className="alert alert-dark mt-3 p-4" style={{ borderRadius: 6, boxShadow: '0px 3px 10px rgba(0,0,0,0.15)' }}>
+                    <div className="row">
+                        <div className="col" dangerouslySetInnerHTML={{ __html: translate("DATAGRID.SELECTED.NRECORD").replace("%n%", checkedItemCount) }} ></div>
+                        {multiActions && <div className="mr-2 p-1" style={{ backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 10 }}>{
+                            multiActions.map((Item, index) => <div key={"kk" + index} style={{ margin: 2, display: 'inline-block' }}><Item datagrid={this} idField={idSelector} ids={
+                                this.state.checkedList[0] === '-1' ? rawData.map((item) => item[idSelector]) : this.state.checkedList
+                            } data={(this.state.data || [])}></Item></div>)
+                        }</div>}
+                    </div>
+                </div>}
 
-                    {isMobile ? (<div>
-                        {filteredData.map((rowItem, index) => {
-                            const dataId = keySelector(rowItem);
-                            const checkBox = checkboxEnabled && (this.renderCheck.call(this, dataId));
-                            const isChecked = checkBox && checkBox[1];
-                            return <div className={isChecked && 'table-primary'} style={{ padding: 10, borderBottom: '1px solid rgba(0,0,0,0.1)' }}>
-                                {checkBox && <div style={{ marginBottom: 10 }}>{checkBox[0]}</div>}
-                                {React.Children.map(_children, child => {
-                                    if (React.isValidElement(child)) {
-                                        return React.cloneElement(child, { data: rowItem, value: rowItem[child.props.name], datagrid: this });
-                                    }
-                                    return child;
-                                }).map(item => <div className="row">
-                                    <div className="col-6 font-weight-bold"> {translate(item.props.title || items.props.name)}</div>
-                                    <div className="col-6 datagrid-cell"> {item}</div>
-                                </div>)}
-                                {
-                                    actions && <div className="row col-12 datagrid-cell" style={{ justifyContent: 'flex-end' }}>
-                                        <label className="font-weight-bold">{translate("DATAGRID.ACTIONS")}</label>
-                                        <hr />
-                                        {actions.map((Item, index) => <div style={{ display: 'inline-block', margin: 2 }}><Item key={"kk" + index} datagrid={this} id={dataId} data={rowItem}></Item></div>)}
-                                    </div>
+                {isMobile ? (<div>
+                    {filteredData.map((rowItem, index) => {
+                        const dataId = keySelector(rowItem);
+                        const checkBox = checkboxEnabled && (this.renderCheck.call(this, dataId));
+                        const isChecked = checkBox && checkBox[1];
+                        return <div className={isChecked && 'table-primary'} style={{ padding: 10, borderBottom: '1px solid rgba(0,0,0,0.1)' }}>
+                            {checkBox && <div style={{ marginBottom: 10 }}>{checkBox[0]}</div>}
+                            {React.Children.map(_children, child => {
+                                if (React.isValidElement(child)) {
+                                    return React.cloneElement(child, { data: rowItem, value: rowItem[child.props.name], datagrid: this });
                                 }
-                            </div>;
-                        })}
-                    </div>) : (<div className="table-responsive" style={{ minHeight: 200, overflow: 'visible' }}>
-                        <table className="table table-hover">
-                            <thead>
-                                <tr>
-                                    {checkboxEnabled && (this.renderCheck.call(this, null)[0])}
-                                    {_children.map((col, index) => {
-                                        const { title, name, gridTitle } = col.props;
-                                        const translated = translate(gridTitle || title || name);
-                                        return <th style={{ userSelect: 'none', cursor: 'pointer' }}>
-                                            <div style={{ display: 'flex' }}>
-                                                {orderColumn === name && (orderState ? (<i style={{ color: 'black', marginRight: 3 }} className="bi bi-sort-alpha-up"></i>) : (<i style={{ color: 'black', marginRight: 3 }} className="bi bi-sort-alpha-down"></i>))}
-                                                <div onClick={setOrder.bind(this, name)} style={{ flex: 1 }}>{translated}</div>
-                                                {showFilter && col.props.filter !== false && (
-                                                    <RenderFilter setFilter={setFilter} resetFilter={resetFilter} key={"kk" + index} isFiltered={Boolean(this.state.filters[col.props.name])} col={col} data={rawData}></RenderFilter>
-                                                )}
-                                            </div>
-                                        </th>;
-                                    })}
-                                    {actions && <th>{translate("DATAGRID.ACTIONS")}</th>}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredData.map((rowItem, index) => {
-                                    const dataId = keySelector(rowItem);
-                                    const checkBox = checkboxEnabled && (this.renderCheck.call(this, dataId));
-                                    const isChecked = checkBox && checkBox[1];
-                                    //onClick={() => {if (checkBox && checkBox.length === 3) checkBox[2]();}}
-
-                                    return <tr className={isChecked && 'table-primary'} >
-                                        {checkBox && checkBox[0]}
-                                        {React.Children.map(_children, child => {
-                                            if (React.isValidElement(child)) {
-                                                return React.cloneElement(child, { data: rowItem, value: rowItem[child.props.name], datagrid: this });
-                                            }
-                                            return child;
-                                        }).map(item => <td>{item}</td>)}
-                                        {
-                                            actions && <td>{actions.map((Item, index) => <div style={{ display: 'inline-block', margin: 2 }}><Item key={"kk" + index} datagrid={this} id={dataId} data={rowItem}></Item></div>)}</td>
-                                        }
-                                    </tr>;
+                                return child;
+                            }).map(item => <div className="row">
+                                <div className="col-6 font-weight-bold"> {translate(item.props.title || items.props.name)}</div>
+                                <div className="col-6 datagrid-cell"> {item}</div>
+                            </div>)}
+                            {
+                                actions && <div className="row col-12 datagrid-cell" style={{ justifyContent: 'flex-end' }}>
+                                    <label className="font-weight-bold">{translate("DATAGRID.ACTIONS")}</label>
+                                    <hr />
+                                    {actions.map((Item, index) => <div style={{ display: 'inline-block', margin: 2 }}><Item key={"kk" + index} datagrid={this} idField={idSelector} ids={[dataId]} id={dataId} data={rowItem}></Item></div>)}
+                                </div>
+                            }
+                        </div>;
+                    })}
+                </div>) : (<div className="table-responsive" style={{ minHeight: 200, overflow: 'visible' }}>
+                    <table className="table table-hover">
+                        <thead>
+                            <tr>
+                                {checkboxEnabled && (this.renderCheck.call(this, null)[0])}
+                                {_children.map((col, index) => {
+                                    const { title, name, gridTitle } = col.props;
+                                    const translated = translate(gridTitle || title || name);
+                                    return <th style={{ userSelect: 'none', cursor: 'pointer' }}>
+                                        <div style={{ display: 'flex' }}>
+                                            {orderColumn === name && (orderState ? (<i style={{ color: 'black', marginRight: 3 }} className="bi bi-sort-alpha-up"></i>) : (<i style={{ color: 'black', marginRight: 3 }} className="bi bi-sort-alpha-down"></i>))}
+                                            <div onClick={setOrder.bind(this, name)} style={{ flex: 1 }}>{translated}</div>
+                                            {showFilter && col.props.filter !== false && (
+                                                <RenderFilter setFilter={setFilter} resetFilter={resetFilter} key={"kk" + index} isFiltered={Boolean(this.state.filters[col.props.name])} col={col} data={rawData}></RenderFilter>
+                                            )}
+                                        </div>
+                                    </th>;
                                 })}
-                            </tbody>
+                                {actions && <th>{translate("DATAGRID.ACTIONS")}</th>}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredData.map((rowItem, index) => {
+                                const dataId = keySelector(rowItem);
+                                const checkBox = checkboxEnabled && (this.renderCheck.call(this, dataId));
+                                const isChecked = checkBox && checkBox[1];
+                                //onClick={() => {if (checkBox && checkBox.length === 3) checkBox[2]();}}
 
-                        </table>
-                    </div>)}
+                                return <tr className={isChecked && 'table-primary'} >
+                                    {checkBox && checkBox[0]}
+                                    {React.Children.map(_children, child => {
+                                        if (React.isValidElement(child)) {
+                                            return React.cloneElement(child, { data: rowItem, value: rowItem[child.props.name], datagrid: this });
+                                        }
+                                        return child;
+                                    }).map(item => <td>{item}</td>)}
+                                    {
+                                        actions && <td>{actions.map((Item, index) => <div style={{ display: 'inline-block', margin: 2 }}><Item key={"kk" + index} datagrid={this} idField={idSelector} ids={[dataId]} id={dataId} data={rowItem}></Item></div>)}</td>
+                                    }
+                                </tr>;
+                            })}
+                        </tbody>
 
-                    <div>
-                        <div style={{ float: 'left' }}>
-                            <label className="font-weight-bold font-size-xs text-muted">{translate("DATAGRID.STATUS.NRECORD").replace("%n%", rawData.length)}</label>
+                    </table>
+                </div>)}
+
+                <div>
+                    <div style={{ float: 'left' }}>
+                        <label className="font-weight-bold font-size-xs text-muted">{translate("DATAGRID.STATUS.NRECORD").replace("%n%", rawData.length)}</label>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <div style={{ marginRight: 3 }}>
+                            <FastPageSizeChanger pageSizes={pageSizes} pageSize={this.state.itemCount} setPageSize={((p) => {
+                                var prevPageCount = Math.ceil(data.length / (this.state.itemCount * 1.0));
+                                var newPageCount = Math.ceil(data.length / (p * 1.0));
+                                var newPage = this.state.page / (prevPageCount * 1.0) * newPageCount;
+                                if (newPage + 1 > newPageCount) newPage = newPageCount - 1;
+                                if (newPage < 0) newPage = 0;
+                                newPage = Math.floor(newPage);
+                                this.setState({ itemCount: p, page: newPage });
+                            })} />
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
-                            <div style={{ marginRight: 3 }}>
-                                <FastPageSizeChanger pageSizes={pageSizes} pageSize={this.state.itemCount} setPageSize={((p) => {
-                                    var prevPageCount = Math.ceil(data.length / (this.state.itemCount * 1.0));
-                                    var newPageCount = Math.ceil(data.length / (p * 1.0));
-                                    var newPage = this.state.page / (prevPageCount * 1.0) * newPageCount;
-                                    if (newPage + 1 > newPageCount) newPage = newPageCount - 1;
-                                    if (newPage < 0) newPage = 0;
-                                    newPage = Math.floor(newPage);
-                                    this.setState({ itemCount: p, page: newPage });
-                                })} />
-                            </div>
-                            <div style={{ marginRight: 3 }}>
-                                <FastPagination max={data.length} itemCount={this.state.itemCount} page={this.state.page} setPage={(p) => { this.setState({ page: p }) }}></FastPagination>
-                            </div>
+                        <div style={{ marginRight: 3 }}>
+                            <FastPagination max={data.length} itemCount={this.state.itemCount} page={this.state.page} setPage={(p) => { this.setState({ page: p }) }}></FastPagination>
                         </div>
                     </div>
                 </div>
-            </div >
+            </div>
+        </div >
         );
     }
 
@@ -396,7 +432,7 @@ class FastPagination extends Component {
         if (page + 1 < pageCount) items.push([">>", pageCount - 1]);
         return <ul className="pagination" style={{ margin: 0 }}>{items.map(item => {
             return <li style={{ margin: 5 }} key={"k" + item} className={`page-item ${item[1] === page ? 'active' : null}`}>
-                <button type="button" style={{ padding: 10 }} onClick={() => { setPage(item[1]) }} className="page-link" style={{  boxShadow: getElevation(item[1] === page ? 2 : 0) }}>{item[0]}</button>
+                <button type="button" style={{ padding: 10 }} onClick={() => { setPage(item[1]) }} className="page-link" style={{ boxShadow: getElevation(item[1] === page ? 2 : 0) }}>{item[0]}</button>
             </li>;
         })}</ul>;
     }
@@ -439,18 +475,18 @@ class FastGridSearchBox extends Component {
         var foundTranslated = translate("DATAGRID.SEARCH.FOUND");
         var searchTitle = translate("DATAGRID.SEARCH.TITLE");
         return <div className="input-group" style={{ display: block ? 'flex' : 'inline-flex', flex: 1 }}>
-            <div className="input-group-prepend" style={{display: 'block'}}>
-                <span className="input-group-text" style={{height:'100%'}}><i className="bi bi-search"></i></span>
+            <div className="input-group-prepend" style={{ display: 'block' }}>
+                <span className="input-group-text" style={{ height: '100%' }}><i className="bi bi-search"></i></span>
             </div>
             <input placeholder={searchTitle} style={{ flex: 1, ...style, height: 44 }} className="form-control" type="text" value={this.props.value} onChange={(evt) => { this.props.setValue(evt.target.value) }} />
-            {(this.props.value || "").trim().length > 0 && <div class="input-group-append"  style={{display: 'block'}}>
-                <span class="input-group-text" style={{ cursor: 'pointer', padding: '0px 5px', height:'100%' }} onClick={() => {
+            {(this.props.value || "").trim().length > 0 && <div class="input-group-append" style={{ display: 'block' }}>
+                <span class="input-group-text" style={{ cursor: 'pointer', padding: '0px 5px', height: '100%' }} onClick={() => {
                     this.props.setValue("");
                 }}><i className="bi bi-x text-dark" style={{ fontSize: '1.5rem' }}></i></span>
             </div>}
             {found !== null && found !== undefined && (this.props.value || "").length > 0 ? (
                 <div>
-                    <label className="text-muted font-weight-bold font-italic font-size-xs p-1 pt-3" style={{fontSize: '0.7rem'}}>{foundTranslated.replace("%n%", found)}</label>
+                    <label className="text-muted font-weight-bold font-italic font-size-xs p-1 pt-3" style={{ fontSize: '0.7rem' }}>{foundTranslated.replace("%n%", found)}</label>
                 </div>
             ) : null
             }

@@ -54,7 +54,13 @@ export class RemoteDataSource extends IDataSource {
         if (result && (result.success || result.Success)) {
             result = result.data || result.result || result.results || result.Data || result.Result || result.Results;
         }
-        this.records = result;
+
+        if (!Array.isArray(result)) {
+            this.records = [];
+        }
+        else {
+            this.records = result;
+        }
         await this.onRetrieve.invoke(this, result);
         return true;
     }
