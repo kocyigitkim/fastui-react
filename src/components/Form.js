@@ -3,12 +3,14 @@ import { chooseOne, getElevation, toTitleCase, translate } from '../utils';
 import Loading from './Loading'
 import { getApiHandler } from './../utils';
 import toast from 'react-hot-toast';
+import { DynoState, DynoValue } from 'faststate-react/states/DynoState';
 
 export class FastForm extends Component {
     state = {
         loading: false,
         detailData: null
     }
+    _state = new DynoState();
     static Inherit = {
         getFieldProps: () => { },
         getFormField: () => { },
@@ -17,6 +19,7 @@ export class FastForm extends Component {
 
     constructor(props) {
         super(props);
+        this.getState = this.getState.bind(this);
         this.getFormField = this.getFormField.bind(this);
         this.setFormField = this.setFormField.bind(this);
         this.getFieldProps = this.getFieldProps.bind(this);
@@ -30,6 +33,8 @@ export class FastForm extends Component {
         if (formId && this.props.editId) {
             request[IdSelector] = this.props.editId;
         }
+        const requestMapper = this.props.requestMapper || ((action, r) => r);
+        request = requestMapper(action, request);
         const api = getApiHandler();
         var response = await api.execute(this.props.path, action, request, "POST");
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -48,44 +53,31 @@ export class FastForm extends Component {
         }
         this.setState({ loading: false });
     }
-
+    getState() {
+        return this.props.state || this._state;
+    }
     getFormField(name) {
-        return this.state[name];
+        return this.getState().value(null, name);
     }
     setFormField(name, value) {
-        this.setState({
-            [name]: value
-        });
+        this.getState().value(null, name).writeUpdate(value);
     }
     getFieldProps(name, onChange) {
-        const _form = this;
+        const fieldValueRef = this.getState().value(null, name);
         return {
-            form: this, name: name, value: this.state[name], onChange: (v) => {
-                if (v.checked) v = v.checked;
-                v = v.target ? v.target.value : v;
-                _form.setState({ [name]: v });
-                if (onChange) onChange.call(_form, v, name);
+            form: this, name: name, value: fieldValueRef, onChange: (v) => {
+                if (v !== null && v !== undefined) {
+                    if (v.checked) v = v.checked;
+                    v = v.target ? v.target.value : v;
+                }
+                if (onChange) onChange(v, name);
             }
         };
     }
 
     async actionOnClick(action) {
         action = action.action;
-
-        var formData = new FormData(this.frm);
-        var request = {};
-
-        for (var entry of formData.entries()) {
-            var isExists = Boolean(request[entry[0]]);
-            var value = request[entry[0]];
-            if (isExists) {
-                request[entry[0]] = value.length >= 0 ? [...value, entry[1]] : [value, entry[1]];
-            }
-            else {
-                request[entry[0]] = entry[1];
-            }
-        }
-
+        var request = { ...this.props.extraArgs, ...this.getState().fields };
 
         const context = {
             action: action,
@@ -103,20 +95,32 @@ export class FastForm extends Component {
 
     async componentDidMount() {
         var datasource = this.props.datasource;
+        var extraArgs = this.props.extraArgs;
         if (datasource) {
             this.setState({ loading: true });
+            datasource.args = { ...extraArgs, ...datasource.args };
             await datasource.retrieve();
+            if (datasource.records.length === 0 && datasource.rawResult && datasource.rawResult.data && !Array.isArray(datasource.rawResult.data)) {
+                datasource.records = [datasource.rawResult.data];
+            }
             if (Array.isArray(datasource.records)) {
-                this.setState({ loading: false, ...(datasource.records || [])[0] });
+                setTimeout(() => {
+                    this.setState({ loading: false }, () => {
+                        this.getState().setAll({ ...(datasource.records || [])[0] });
+                    });
+                }, 500);
             }
             else {
-                this.setState({ loading: false, ...(datasource.records || {}) });
+                setTimeout(() => {
+                    this.setState({ loading: false }, () => {
+                        this.getState().setAll({ ...(datasource.records || {}) });
+                    });
+                }, 500);
+
             }
         }
     }
-    loadDetail(data) {
-        this.setState({ ...data });
-    }
+
     render() {
         const { title, loading, actions, headerActions, outlined, submit, elevation, elevationColor } = this.props;
         const shadowConfig = getElevation(chooseOne(elevation, 5), chooseOne(elevationColor, '#000'));
@@ -124,7 +128,7 @@ export class FastForm extends Component {
         return (
             <form ref={(r => this.frm = r)} method="post" >
                 <div className="card" style={{ borderRadius: 10, boxShadow: outlined ? null : shadowConfig }}>
-                    <Loading show={this.state.loading}>{translate(loading || "FORM.LOADING")}</Loading>
+                    <Loading show={this.props.loading || this.state.loading}>{translate(loading || "FORM.LOADING")}</Loading>
                     {(title || headerActions) && <div className="card-header" style={{ borderTopLeftRadius: 10, borderTopRightRadius: 10 }}>
                         <div style={{ display: 'flex' }}>
                             <h5 style={{ flex: 1 }} className="card-title">{translate(title)}</h5>
@@ -158,7 +162,7 @@ FastForm.CustomAction = class FastFormCustomAction extends Component {
     render() {
         const { title, action } = this.props;
         const translated = translate(title);
-        console.log(translated, this);
+
         return <div style={{ display: 'contents' }}>
             <button {...{ ...this.props, form: null, title: translated }} type="button" onClick={this.props.onClick}>{this.props.children}{translated}</button>
         </div>;

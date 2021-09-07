@@ -23,8 +23,11 @@ export class TextField extends CustomField {
     }
     form(props) {
         var newProps = {};
-        const { type, placeholder, title, description } = newProps = { ...this.props, ...props };
+        var { type, placeholder, title, value, description } = newProps = { ...this.props, ...props };
         const translated = translate(title);
+        if (type == "date" || type == "datetime") {
+            value = value !== undefined && value !== null && moment(value).toDate();
+        }
         return <div className="form-group">
             {title && <div className="form-label">{translated}</div>}
             <input className="form-control" {...newProps} title={translated} />

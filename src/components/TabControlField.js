@@ -11,15 +11,16 @@ export default class TabControlField extends CustomField {
         this.state = {
             tabIndex: 0
         };
-
     }
     setTab(index) {
         this.setState({ tabIndex: index });
     }
+
     render() {
         const { vertical, filled } = this.props;
-        var pages = this.props.pages.filter(p=>p!==undefined && p!==null);
-        
+        var pages = this.props.pages.filter(p => p !== undefined && p !== null);
+
+
         if (vertical === true) {
             return (
                 <div className="row">
@@ -36,7 +37,7 @@ export default class TabControlField extends CustomField {
                     <div className="col-xs-12 col-sm-12 col-md-9">
                         <div className="tab-content">
                             {pages.map((page, index) => {
-                                if(index !== this.state.tabIndex){
+                                if (index !== this.state.tabIndex) {
                                     return <div></div>;
                                 }
                                 const TabContent = page.content;

@@ -1,13 +1,9 @@
 import React, { Component } from 'react'
 import { IDataSource } from '../DataSource'
-import { chooseOne, translate } from '../utils';
+import { chooseOne, initializeSelect2ToTree, translate } from '../utils';
 import { CustomField } from "./CustomField";
 import ReactSelect from 'react-select2-wrapper'
-import 'react-select2-wrapper/css/select2.css'
-
-var __rawStyleChild = global.window.document.createElement("style");
-__rawStyleChild.innerText = `span.select2-selection,.select2-container--default  .select2-selection__rendered,.select2-container--default  .select2-selection__arrow {height: calc(1.5em + 1.3rem + 2px) !important;line-height: calc(1.5em + 1.3rem + 2px) !important;}span.select2-selection .select2-selection__choice{max-height: calc(1.5em + 1.3rem - 4px) !important;position: relative;top: 2px;line-height: initial !important;display: inline-flex;align-items: center;}`;
-global.window.document.head.appendChild(__rawStyleChild);
+import { v4 as uuid } from 'uuid';
 
 export default class ComboBoxField extends CustomField {
     state = {
@@ -16,6 +12,7 @@ export default class ComboBoxField extends CustomField {
         inited: false
     };
     inited = false;
+    id = "cmd" + uuid().replace(/\{|\}|\-/g, "");
     constructor(props) {
         super(props);
         this.getDataSource = this.getDataSource.bind(this);
@@ -23,10 +20,17 @@ export default class ComboBoxField extends CustomField {
     async componentDidMount() {
         if (this.inited) return;
         this.inited = true;
+
         this.setState({ loading: true });
 
-        const labelSelector = this.props.labelSelector || ((k) => chooseOne(k.Name, k.Title, k.Label, k.name, k.title, k.label));
-        const valueSelector = this.props.valueSelector || ((k) => chooseOne(k.Id, k.Value, k.Code, k.id, k.value, k.code));
+        var labelSelector = this.props.labelSelector || ((k) => chooseOne(k.Name, k.Title, k.Label, k.name, k.title, k.label));
+        var valueSelector = this.props.valueSelector || ((k) => chooseOne(k.Id, k.Value, k.Code, k.id, k.value, k.code));
+        if (typeof labelSelector != "function") {
+            labelSelector = ((k, data) => data[k]).bind(this, labelSelector);
+        }
+        if (typeof valueSelector != "function") {
+            valueSelector = ((k, data) => data[k]).bind(this, valueSelector);
+        }
         const dataSource = this.getDataSource();
         if (!dataSource) return;
 
@@ -40,11 +44,44 @@ export default class ComboBoxField extends CustomField {
         dataSource.onRetrieve.add(((sender, args) => {
             this.setState({
                 options: dataSource.records.map(item => ({
-                    text: labelSelector(item),
+                    text: translate(labelSelector(item)),
                     id: valueSelector(item)
                 })),
                 loading: false,
                 inited: true
+            }, () => {
+                if (this.props.nested) {
+                    const nestedProperty = "ParentId";
+                    const nestedBuilder = typeof this.props.nested === 'function' ? (this.props.nested) : ((data) => {
+                        var result = [];
+                        const connectParent = (record) => {
+                            var subitems = data.filter(p => p[nestedProperty] === valueSelector(record));
+                            var newRecord = {
+                                id: valueSelector(record),
+                                text: labelSelector(record)
+                            };
+                            for (var i = 0; i < subitems.length; i++) {
+                                subitems[i] = connectParent(subitems[i]);
+                            }
+                            newRecord.inc = subitems;
+                            return newRecord;
+                        };
+                        for (var item of data.filter(p => {
+                            var v = p[nestedProperty];
+                            return v === null | v === undefined;
+                        })) {
+                            result.push(connectParent(item));
+                        }
+                        return result;
+                    });
+
+                    const select2El = this.selectRef.el;
+                    if (select2El) {
+                        const jQ = select2El.constructor;
+                        initializeSelect2ToTree(jQ);
+                        jQ.fn.select2ToTree.call(select2El, { treeData: { dataArr: nestedBuilder(dataSource.records) } });
+                    }
+                }
             });
         }).bind(this));
         await dataSource.retrieve();
@@ -55,16 +92,26 @@ export default class ComboBoxField extends CustomField {
     getDataSource() {
         return this.props.datasource;
     }
-    onChange(...args) {
+    onChange(value, setPermanently) {
         if (this.state.options.length === 0 && !this.state.inited) return;
 
-        if (this.props.onChange) this.props.onChange(...args);
+        if (value && value.target) {
+            var selectedIds = [];
+            for (var option of value.target.selectedOptions) {
+                selectedIds.push(option.value);
+            }
+
+            value = selectedIds;
+        }
+        if (setPermanently || (value & (Array.isArray(value) ? (value.length > 0 || ((Array.isArray(this.props.value) && this.props.value.length != value.length) || !this.props.value)) : true))) {
+            if (this.props.onChange) this.props.onChange(value);
+        }
+
     }
     onOpen(evt) {
 
         try {
             var searchFieldId = evt.target.parentElement.querySelector(".select2-selection").getAttribute("aria-owns");
-            console.log(searchFieldId);
             var el = global.window.document.querySelector("#" + searchFieldId + "").parentElement.parentElement.querySelector("input");
             if (el) {
                 el.focus();
@@ -75,14 +122,28 @@ export default class ComboBoxField extends CustomField {
 
     }
     form() {
-        const { type, placeholder, title, name, description } = this.props;
+        const { type, placeholder, title, name, description, disabled } = this.props;
         const translated = translate(title || name);
+        const value = Array.isArray(this.props.value) ? (this.props.value.length === 0 ? null : this.props.value) : this.props.value;
+        const existsValue = Boolean(value !== null && value !== undefined && (Array.isArray(value) ? value.length > 0 : true));
         return (
             <div className="form-group">
                 {title && <div className="form-label">{translated}</div>}
-                <ReactSelect {...this.props} onOpen={this.onOpen.bind(this)} onChange={this.onChange.bind(this)} multiple={this.props.multiple} placeholder={placeholder && translate(placeholder)} style={{ width: '100%' }} placeholder={translate(this.props.title)} data={this.state.options} isLoading={this.state.loading}></ReactSelect>
-                {description && <div className="text-muted">{translate(description)}</div>}
+                <div style={{ display: 'flex', width: '100%' }}>
+                    <div style={{ flex: 1 }}>
+                        {disabled === true ? (
+                            <div>
+                            </div>
+                        ): (
+                            <ReactSelect {...this.props} value={value} ref={r => this.selectRef = r} onOpen={this.onOpen.bind(this)} multiple={this.props.multiple} style={{ width: '100%' }} placeholder={translate(this.props.title)} data={(!this.props.nested && this.state.options) || []} isLoading={this.state.loading} id={this.id}></ReactSelect>
+                    )}
+                </div>
+                {(disabled !== true && existsValue) ? (<div style={{ display: 'inline-block', marginLeft: 5 }}>
+                    <button tabIndex="-1" type="button" className="btn btn-outline-danger" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={this.onChange.bind(this, this.props.nested ? [] : null, true)}><i className="bi bi-x" style={{ fontSize: '1.5rem', padding: 0 }}></i></button>
+                </div>) : (<div></div>)}
             </div>
+                { description && <div className="text-muted">{translate(description)}</div> }
+            </div >
         )
     }
 }

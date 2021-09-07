@@ -3,7 +3,12 @@ import { FastApiClient } from "fastapi-express-client";
 import { PermissionBuilder } from "./PermissionBuilder";
 import color from 'color';
 
+import select2totreePackage from './select2totree.js';
 
+
+export function initializeSelect2ToTree(jQuery) {
+    select2totreePackage(jQuery);
+}
 
 /**
  * @returns {FastApiClient}

@@ -49,10 +49,9 @@ export class ImagePickerField extends CustomField {
             reader.onload = () => resolve(reader.result);
             reader.onerror = error => reject(error);
         });
-        var newFiles = [];
+        var newFiles = [...this.state.files];
         for (var i = 0; i < files.length; i++) {
             var file = files[i];
-            file.index = i;
             file.id = uuid();
             if (!file.type.startsWith("image/")) {
                 continue;
@@ -60,15 +59,13 @@ export class ImagePickerField extends CustomField {
             file.base64Data = await toBase64(file).catch(console.error);
             newFiles.push(file);
         }
-        if (files.length > 0 && newFiles.length != files.length) {
-            //error: unsupported file type
-        } else {
-            if (this.props.onChange) this.props.onChange(newFiles);
-        }
+
+        if (this.props.onChange) this.props.onChange(newFiles);
+        this.fileUpload.value = "";
+
         return newFiles;
     }
     uploadFile() {
-        console.log(this.fileUpload);
         this.fileUpload.click();
     }
     async handleFileUpload(evt) {
@@ -89,7 +86,7 @@ export class ImagePickerField extends CustomField {
             onDragLeave: this.handleDragLeave.bind(this)
         };
 
-        const firstFile = value || this.state.files[0];
+        const firstFile = Array.isArray(this.state.files) ? this.state.files[0] : null;
 
         return <div className="form-group">
             <input accept="image/*" onChange={this.handleFileUpload.bind(this)} multiple={multi} type="file" ref={(r) => this.fileUpload = r} style={{ display: 'none' }} />
@@ -173,11 +170,11 @@ export class ImagePickerField extends CustomField {
                 }}></div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: 10 }}>
                     <label style={{ fontWeight: 'bold', marginBottom: 3, maxWidth: 250 }}>{firstFile && firstFile.name}</label>
-                    <label>{firstFile && firstFile.type} {firstFile && filesize(firstFile.size)}</label>
+                    <label>{firstFile && firstFile.type} {firstFile && filesize(isNaN(firstFile.size) ? 0 : firstFile.size)}</label>
                 </div>
             </div>
             <div className="col-sm-12 col-xs-6 col-md-6">
-                <button onClick={() => { this.setState({ files: this.state.files.filter((item) => item.index != firstFile.index), dragEntered: false }); }} type="button" className="btn btn-outline-danger btn-size-lg"
+                <button onClick={() => { this.setState({ files: this.state.files.filter((item) => item.id != firstFile.id), dragEntered: false }); }} type="button" className="btn btn-outline-danger btn-size-lg"
                     style={{ height: compact ? 70 : '100%', minWidth: compact ? 70 : 100, float: 'right' }}><i className="bi bi-trash"></i>{translate('IMAGEPICKER.FILLED.REMOVE')}</button>
             </div>
         </div>;

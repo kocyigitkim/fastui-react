@@ -1,12 +1,13 @@
 import React, { Component, Fragment } from 'react';
+import { DynoValue } from 'faststate-react/states/DynoState';
 import { translate } from '../utils';
 import { validate, validateMultiple } from '../validation';
 
 export class CustomField extends Component {
+
     grid(props) {
-        const { title, name } = this.props;
-        const translated = translate(title || name);
-        return <div {...props}>{translated}</div>;
+        const { title, name, value } = this.props;
+        return <div {...props}>{value}</div>;
     }
     form(props) {
         return this.grid.call(this, props);
@@ -17,6 +18,7 @@ export class CustomField extends Component {
         this.setFormField = this.setFormField.bind(this);
         this.getFieldProps = this.getFieldProps.bind(this);
     }
+
     getFormField(...args) {
         const f = this.props.form;
         return f ? f.getFormField(...args) : this.props.getFormField(...args);

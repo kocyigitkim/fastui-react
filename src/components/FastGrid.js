@@ -1,13 +1,14 @@
 import React, { Component, Fragment } from 'react'
-import { chooseOne, getElevation, translate } from '../utils';
+import { chooseOne, getApiHandler, getElevation, translate } from '../utils';
 import Styles from './styles/FastGrid.css'
 import Loading from './Loading'
 import { FastForm } from './Form'
 import { v4 as uuid } from 'uuid'
 import color from 'color'
 import toast from 'react-hot-toast';
-import { Switch } from 'react-router-dom';
-
+import { Switch, useHistory, withRouter } from 'react-router-dom';
+import { DynoState } from 'faststate-react/states/DynoState';
+import { LocalDataSource } from 'fastui-react';
 export default class FastGrid extends Component {
     state = {
         page: 0,
@@ -21,13 +22,38 @@ export default class FastGrid extends Component {
         orderColumn: null,
         orderState: false, //false=ascending, true=descending
         filters: {},
-        editData: null
+        editData: null,
+        pagination: {
+            page: 0,
+            itemCount: 10,
+            count: 0,
+            pageCount: 0
+        }
     };
+    refreshTimerId = 0;
     extra = {};
+    refreshListDelayed(delay) {
+        clearTimeout(this.refreshTimerId);
+        this.refreshTimerId = setTimeout(this.refreshList.bind(this), delay);
+    }
     constructor(props) {
         super(props);
         this.state.mode = props.defaultMode || "grid";
         this.applyLocalFilter = this.applyLocalFilter.bind(this);
+        this.popstate = this.popstate.bind(this);
+        this.popstate(true);
+    }
+    popstate(isctor) {
+        if (!this) return;
+        var canChange = CanChangePage(this.props);
+        if (canChange !== null) {
+            if (isctor === true) {
+                this.state = { ...this.state, ...canChange };
+            }
+            else {
+                this.setState(canChange);
+            }
+        }
     }
     saveConfig() {
         window.localStorage.setItem(this.__id, JSON.stringify({ itemCount: this.state.itemCount }));
@@ -48,11 +74,14 @@ export default class FastGrid extends Component {
             return await global.window.fastui.apiHandler.execute.call(global.window.fastui.apiHandler, className, actionName, ...args).catch(console.error);
         };
 
-        var lastConfig = JSON.parse(window.localStorage.getItem(key));
-        this.setState(lastConfig);
+        var lastConfig = JSON.parse(window.localStorage.getItem(key)) || {};
         window.addEventListener("resize", this.onResize.bind(this));
         this.onResize.call(this);
-        this.refreshList.call(this);
+        window.addEventListener("popstate", this.popstate);
+        this.setState({ ...lastConfig, pagination: { page: 0, itemCount: lastConfig.itemCount || 10 } }, this.refreshList.bind(this));
+    }
+    componentWillUnmount() {
+        window.removeEventListener("popstate", this.popstate);
     }
     componentDidUpdate() {
         this.saveConfig();
@@ -87,13 +116,15 @@ export default class FastGrid extends Component {
                 return orderState ? (sign * -1) : sign;
             });
         }
-        if (this.state.page * this.state.itemCount > data.length) {
+        var isLocal = this.props.datasource instanceof LocalDataSource ? true : false;
+        if (isLocal && this.state.page * this.state.itemCount > data.length) {
             this.setState({
                 page: 0
-            });
+            }, this.refreshList.bind(this));
         }
-        var filteredData = data.slice(this.state.page * this.state.itemCount, Math.min(data.length, ((this.state.page + 1) * this.state.itemCount)));
-        console.log(this, data, filteredData);
+
+        var filteredData = isLocal ? data.slice(this.state.page * this.state.itemCount, Math.min(data.length, ((this.state.page + 1) * this.state.itemCount))) : data;
+
         this.setState({
             filtered: {
                 filteredData,
@@ -103,25 +134,31 @@ export default class FastGrid extends Component {
     }
     async retrieveData() {
         var datasource = this.props.datasource;
+        const extraArgs = this.props.extraArgs;
         if (datasource && datasource.retrieve) {
+
             datasource.args = {
+                ...datasource.args,
+                ...extraArgs,
                 pagination: {
                     page: this.state.page,
                     itemCount: this.state.itemCount
                 },
                 filter: this.state.filters,
-                searchText: this.state.searchText,
+                search: this.state.searchText,
                 sort: {
                     column: this.state.orderColumn,
                     state: this.state.orderState
                 }
             };
             await datasource.retrieve();
+            var newPagination = (datasource.rawResult || {}).pagination;
             this.setState({
-                data: []   
-            }, ()=>{
+                data: []
+            }, () => {
                 this.setState({
-                    data: datasource.records || []
+                    data: datasource.records || [],
+                    pagination: newPagination
                 }, this.applyLocalFilter.bind(this, datasource.records || []));
             });
         }
@@ -134,7 +171,7 @@ export default class FastGrid extends Component {
     async refreshList() {
         this.setState({ loading: true, data: null });
         await this.retrieveData.call(this);
-        this.setState({ loading: false });
+        setTimeout(() => { this.setState({ loading: false }); }, 500);
     }
     onResize() {
 
@@ -197,6 +234,12 @@ export default class FastGrid extends Component {
         });
     }
     setMode(v) {
+        var canChange = CanChangePage(this.props);
+        if (canChange !== null) {
+            if (v === "grid") {
+                window.location = window.location.toString().split('#')[0] + "#q=g";
+            }
+        }
         this.setState({
             mode: v
         }, v === 'grid' ? this.refreshList.bind(this) : null);
@@ -223,7 +266,9 @@ export default class FastGrid extends Component {
         const orderColumn = this.state.orderColumn;
         const orderState = this.state.orderState;
         const showSort = this.props.sort;
+        const apiPath = this.props.path;
         const idSelector = this.props.idSelector || "Id";
+        const extraArgs = this.props.extraArgs;
         const setFilter = (fieldName, filter) => { this.setState({ filters: { ...this.state.filters, [fieldName]: filter } }, this.refreshList.bind(this)); };
         const resetFilter = (fieldName) => {
             var filters = this.state.filters;
@@ -240,6 +285,10 @@ export default class FastGrid extends Component {
         };
         if (this.props.edit) {
             actions = [...(actions ?? []), (props) => (<FastForm.Edit onClick={() => {
+                var canChange = CanChangePage(this.props);
+                if (canChange !== null) {
+                    window.location = window.location.toString().split('#')[0] + "#q=e.." + props.data[idSelector];
+                }
                 this.setState({ mode: 'edit', editData: props.data });
             }} />)];
         }
@@ -256,10 +305,10 @@ export default class FastGrid extends Component {
             }
             return true;
         });
-        const checkedItemCount = this.state.checkedList[0] === '-1' ? (rawData.length) : this.state.checkedList.length;
+        const checkedItemCount = this.state.checkedList && this.state.checkedList[0] === '-1' ? (rawData.length) : (this.state.checkedList || []).length;
 
-        if (this.state.mode === "new" || this.state.mode === "edit") {
-            return <FastGridNewForm idSelector={idSelector} path={this.props.path} resetEdit={this.resetEdit.bind(this)} editData={this.state.mode === 'edit' && this.state.editData} {...this.props} api={this.extra} mode={this.state.mode} edit={this.props.edit} create={this.props.create} title={title} setMode={this.setMode.bind(this)} children={_children} datagrid={this} refresh={this.refreshList.bind(this)} setLoading={this.setLoading.bind(this)} />;
+        if (this.state.mode === "create" || this.state.mode === "edit") {
+            return <FastGridNewForm requestMapper={this.props.requestMapper} extraArgs={extraArgs} idSelector={idSelector} path={this.props.path} resetEdit={this.resetEdit.bind(this)} editData={this.state.mode === 'edit' && this.state.editData} {...this.props} api={this.extra} mode={this.state.mode} edit={this.props.edit} create={this.props.create} title={title} setMode={this.setMode.bind(this)} children={_children} datagrid={this} refresh={this.refreshList.bind(this)} setLoading={this.setLoading.bind(this)} />;
         }
 
         const elevation = chooseOne(this.props.elevation, 5);
@@ -268,15 +317,18 @@ export default class FastGrid extends Component {
             <Loading show={loading} />
             <div className="card-header" style={{ borderTopLeftRadius: 10, borderTopRightRadius: 10 }}>
                 <div>
-                    <h4 className="card-title">{title}</h4>
+                    <div className="row" style={{ margin: 0, marginBottom: 10 }}>
+                        <div className="col"> <h4 className="card-title">{title}</h4></div>
+                        <div><i onClick={this.refreshList.bind(this)} className="bi bi-arrow-clockwise btn btn-outline-dark" style={{ padding: '10px 20px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem' }}></i></div>
+                    </div>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row' }}>
                     <div style={{ flex: 1, marginBottom: isMobile ? 10 : 0 }}>
-                        {showSearch && <FastGridSearchBox block style={{ maxWidth: isMobile ? '100%' : 300 }} data={data} filteredData={filteredData} value={this.state.searchText} setValue={(v) => { this.setState({ searchText: v }) }}></FastGridSearchBox>}
+                        {showSearch && <FastGridSearchBox block style={{ maxWidth: isMobile ? '100%' : 300 }} data={data} filteredData={filteredData} value={this.state.searchText} setValue={(v) => { this.setState({ searchText: v }, this.refreshListDelayed.bind(this, 400)) }}></FastGridSearchBox>}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        {showCreate && <FastGridCreate {...this.props} setMode={this.setMode.bind(this)} />}
+                        {showCreate && <FastGridCreate {...this.props} path={apiPath} setMode={this.setMode.bind(this)} />}
                     </div>
                 </div>
             </div>
@@ -325,7 +377,7 @@ export default class FastGrid extends Component {
                                 {_children.map((col, index) => {
                                     const { title, name, gridTitle } = col.props;
                                     const translated = translate(gridTitle || title || name);
-                                    return <th style={{ userSelect: 'none', cursor: 'pointer' }}>
+                                    return <th key={"k" + index} style={{ userSelect: 'none', cursor: 'pointer' }}>
                                         <div style={{ display: 'flex' }}>
                                             {orderColumn === name && (orderState ? (<i style={{ color: 'black', marginRight: 3 }} className="bi bi-sort-alpha-up"></i>) : (<i style={{ color: 'black', marginRight: 3 }} className="bi bi-sort-alpha-down"></i>))}
                                             <div onClick={setOrder.bind(this, name)} style={{ flex: 1 }}>{translated}</div>
@@ -343,18 +395,16 @@ export default class FastGrid extends Component {
                                 const dataId = keySelector(rowItem);
                                 const checkBox = checkboxEnabled && (this.renderCheck.call(this, dataId));
                                 const isChecked = checkBox && checkBox[1];
-                                //onClick={() => {if (checkBox && checkBox.length === 3) checkBox[2]();}}
-
-                                return <tr className={isChecked && 'table-primary'} >
+                                return <tr key={"k" + index} className={isChecked && 'table-primary'} >
                                     {checkBox && checkBox[0]}
                                     {React.Children.map(_children, child => {
                                         if (React.isValidElement(child)) {
                                             return React.cloneElement(child, { data: rowItem, value: rowItem[child.props.name], datagrid: this });
                                         }
                                         return child;
-                                    }).map(item => <td>{item}</td>)}
+                                    }).map((item, itemIndex) => <td key={"k" + index + "_" + itemIndex}>{item}</td>)}
                                     {
-                                        actions && <td>{actions.map((Item, index) => <div style={{ display: 'inline-block', margin: 2 }}><Item key={"kk" + index} datagrid={this} idField={idSelector} ids={[dataId]} id={dataId} data={rowItem}></Item></div>)}</td>
+                                        actions && <td key={"k" + index + "_actions"}>{actions.map((Item, actionIndex) => <div key={"actions_" + index + "_" + actionIndex} style={{ display: 'inline-block', margin: 2 }}><Item key={"kk" + actionIndex} datagrid={this} idField={idSelector} ids={[dataId]} id={dataId} data={rowItem}></Item></div>)}</td>
                                     }
                                 </tr>;
                             })}
@@ -376,11 +426,11 @@ export default class FastGrid extends Component {
                                 if (newPage + 1 > newPageCount) newPage = newPageCount - 1;
                                 if (newPage < 0) newPage = 0;
                                 newPage = Math.floor(newPage);
-                                this.setState({ itemCount: p, page: newPage });
+                                this.setState({ itemCount: p, page: newPage }, this.refreshList.bind(this));
                             })} />
                         </div>
                         <div style={{ marginRight: 3 }}>
-                            <FastPagination max={data.length} itemCount={this.state.itemCount} page={this.state.page} setPage={(p) => { this.setState({ page: p }) }}></FastPagination>
+                            <FastPagination pagination={this.state.pagination} max={data.length} itemCount={this.state.itemCount} page={this.state.page} setPage={(p) => { this.setState({ page: p }, this.refreshList.bind(this)); }}></FastPagination>
                         </div>
                     </div>
                 </div>
@@ -408,11 +458,12 @@ export default class FastGrid extends Component {
 class FastPagination extends Component {
 
     render() {
-        const page = this.props.page;
-        const itemCount = this.props.itemCount;
-        const count = this.props.max;
+        const pagination = this.props.pagination || {};
+        const page = pagination.page || this.props.page;
+        const itemCount = pagination.itemCount || this.props.itemCount;
+        const count = pagination.count || this.props.max;
         const setPage = this.props.setPage;
-        const pageCount = Math.ceil(count / (itemCount * 1.0));
+        const pageCount = pagination.pageCount || Math.ceil(count / (itemCount * 1.0));
         var items = [];
         var stepCount = Math.min(6, pageCount);
         var startIndex = Math.round(Math.max(0, (page - stepCount / 2.0)));
@@ -431,7 +482,7 @@ class FastPagination extends Component {
         }
         if (page + 1 < pageCount) items.push([">>", pageCount - 1]);
         return <ul className="pagination" style={{ margin: 0 }}>{items.map(item => {
-            return <li style={{ margin: 5 }} key={"k" + item} className={`page-item ${item[1] === page ? 'active' : null}`}>
+            return <li key={"k" + item} className={`page-item ${item[1] === page ? 'active' : null}`}>
                 <button type="button" style={{ padding: 10 }} onClick={() => { setPage(item[1]) }} className="page-link" style={{ boxShadow: getElevation(item[1] === page ? 2 : 0) }}>{item[0]}</button>
             </li>;
         })}</ul>;
@@ -498,22 +549,41 @@ class FastGridCreate extends Component {
     render() {
 
         return <div>
-            <button type="button" onClick={() => { this.props.setMode('new') }} className="btn btn-primary"><i className="bi bi-plus"></i> {translate("DATAGRID.ACTION.CREATE")}</button>
+            <button type="button" onClick={() => {
+                if (CanChangePage(this.props) !== null) window.location = window.location.toString().split('#')[0] + "#q=c";
+                this.props.setMode('create');
+            }} className="btn btn-primary"><i className="bi bi-plus"></i> {translate("DATAGRID.ACTION.CREATE")}</button>
         </div>
     }
 }
 
 class FastGridNewForm extends Component {
+    _state = new DynoState();
     state = {
+        loading: false
     }
     constructor(props) {
         super(props);
         this.state = { ...this.state, ...props.editData };
     }
-    componentDidMount() {
-        if (this.props.editData) {
-            this.setState(this.props.editData);
+    async componentDidMount() {
+        if (this.props.datagrid && this.props.mode === 'edit') {
+            const api = getApiHandler();
+            this.setState({ loading: true });
+            var response = await api.execute(this.props.path, "detail", { ...this.props.extraArgs, [this.props.idSelector]: this.props.editData[this.props.idSelector] }, "post");
+            setTimeout(() => { this.setState({ loading: false }); }, 500);
+            if (response) {
+                if (response.success === true) {
+                    this._state.setAll(response.data[0]);
+                }
+            }
         }
+    }
+    shouldComponentUpdate(nextProps, nextState) {
+        if (nextState) {
+            return true;
+        }
+        return false;
     }
     submit(ctx) {
         if (ctx.action === 'cancel') {
@@ -524,20 +594,23 @@ class FastGridNewForm extends Component {
             ctx.submit();
         }
     }
+    getState() {
+        return this._state;
+    }
     getFormField(name) {
-        return this.state[name];
+        return this.getState().value(null, name);
     }
     setFormField(name, value) {
-        this.setState({
-            [name]: value
-        });
+        this.getState().value(null, name).writeUpdate(value);
     }
     getFieldProps(name, onChange) {
+        const fieldValueRef = this._state.value(null, name);
         return {
-            datagrid: this.props.datagrid, name: name, value: this.state[name], onChange: (v) => {
-                if (v.checked) v = v.checked;
-                v = v.target ? v.target.value : v;
-                this.setState({ [name]: v });
+            datagrid: this.props.datagrid, name: name, value: fieldValueRef, onChange: (v) => {
+                if (v !== null && v !== undefined) {
+                    if (v.checked) v = v.checked;
+                    v = v.target ? v.target.value : v;
+                }
                 if (onChange) onChange(v, name);
             }
         };
@@ -551,23 +624,24 @@ class FastGridNewForm extends Component {
         const isEditMode = this.props.mode === 'edit';
         var Form = (isEditMode ? this.props.edit : this.props.create);
         if (Form === true || Form === false) Form = null;
-        const state = this.state;
-        return <div>
-            <FastForm editId={this.props.editData && this.props.editData[this.props.idSelector || "Id"]} onSave={this.onSave.bind(this)} path={this.props.path} title={translate(`DATAGRID.${isEditMode ? 'EDIT' : 'NEW'}.TITLE`).replace("%str%", this.props.title)} headerActions={[FastForm.Cancel]} actions={[FastForm.Save]} submit={this.submit.bind(this)}>
-                {(Form === null || Form === undefined) ? React.Children.map(this.props.children, child => {
-                    var hideParts = (child.props.hide || "").split(",");
-                    if (hideParts.indexOf(this.props.mode) > -1) return <div></div>;
 
-                    if (React.isValidElement(child)) {
-                        return React.cloneElement(child, {
-                            datagrid: this.props.datagrid, value: state[child.props.name], onChange: (v) => {
-                                if (v.checked) v = v.checked;
-                                this.setState({ [child.props.name]: v.target ? v.target.value : v });
-                            }
-                        });
-                    }
-                    return child;
-                }) : <Form {...this.props} getFieldProps={this.getFieldProps.bind(this)} getFormField={this.getFormField.bind(this)} setFormField={this.setFormField.bind(this)} />}
+        return <div>
+            <FastForm requestMapper={this.props.requestMapper} extraArgs={this.props.extraArgs} state={this._state} loading={this.state.loading} editId={this.props.editData && this.props.editData[this.props.idSelector || "Id"]} onSave={this.onSave.bind(this)} path={this.props.path} title={translate(`DATAGRID.${isEditMode ? 'EDIT' : 'NEW'}.TITLE`).replace("%str%", this.props.title)} headerActions={[FastForm.Cancel]} actions={[FastForm.Save]} submit={this.submit.bind(this)}>
+                {(formProps) => {
+                    var buildedFormComponent = ((Form === null || Form === undefined) ? React.Children.map(this.props.children, child => {
+                        var hideParts = (child.props.hide || "").split(",");
+                        if (hideParts.indexOf(this.props.mode) > -1) return <div></div>;
+
+                        if (React.isValidElement(child)) {
+                            const fieldValueRef = this._state.value(null, child.props.name);
+                            return React.cloneElement(child, {
+                                datagrid: this.props.datagrid, value: fieldValueRef, onChange: child.props.onChange
+                            });
+                        }
+                        return child;
+                    }) : ([<Form {...this.props} getFieldProps={this.getFieldProps.bind(this)} getFormField={this.getFormField.bind(this)} setFormField={this.setFormField.bind(this)} />]));
+                    return buildedFormComponent;
+                }}
             </FastForm>
         </div>
     }
@@ -664,4 +738,33 @@ class RenderFilter extends Component {
 
 function onlyUnique(value, index, self) {
     return self.indexOf(value) === index;
+}
+function CanChangePage(props) {
+    var urlParts = window.location.toString().split('#');
+    var pathParts = window.location.pathname.split('/');
+    var className = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : null;
+    if (className !== props.path) return null;
+    var query = urlParts[1];
+    if (query) {
+        var searchParams = new URLSearchParams(query);
+        var qParam = searchParams.get("q");
+        if (qParam) {
+            var qParts = qParam.split('..');
+            if (qParts[0] == "c") {
+                return { mode: 'create' };
+            }
+            else if (qParts[0] == "g") {
+                return { mode: 'grid' };
+            }
+            else if (qParts[0] == "e") {
+                return {
+                    mode: "edit",
+                    editData: {
+                        [props.idSelector || "Id"]: qParts[1]
+                    }
+                };
+            }
+        }
+    }
+    return { mode: 'grid' };
 }

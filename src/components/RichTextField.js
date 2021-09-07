@@ -15,6 +15,12 @@ global.window.document.head.appendChild(__rawStyleChild);
 
 class CKTextEditor extends Component {
     isInit = false;
+    onChange(event, editor) {
+        const onChangeRef = this.props.onChange;
+        if (onChangeRef) {
+            onChangeRef(editor.getData());
+        }
+    }
     render() {
         const isInit = this.isInit;
         var initEditor = false;
@@ -54,7 +60,7 @@ class CKTextEditor extends Component {
 
         const props = this.props;
         return (
-            <CKEditor config={custom_config} {...props} style={{ ...props.style, minHeight: '300px' }} editor={ClassicEditor}></CKEditor>
+            <CKEditor config={custom_config} {...props} data={props.value} onChange={this.onChange.bind(this)} style={{ ...props.style, minHeight: '300px' }} editor={ClassicEditor}></CKEditor>
         )
     }
 }
