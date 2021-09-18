@@ -9,6 +9,8 @@ import toast from 'react-hot-toast';
 import { Switch, useHistory, withRouter } from 'react-router-dom';
 import { DynoState } from 'faststate-react/states/DynoState';
 import { LocalDataSource } from 'fastui-react';
+import AccessDenied from './AccessDenied'
+import { getPermissionBuilder } from '../utils';
 export default class FastGrid extends Component {
     state = {
         page: 0,
@@ -28,7 +30,9 @@ export default class FastGrid extends Component {
             itemCount: 10,
             count: 0,
             pageCount: 0
-        }
+        },
+        accessGranted: true,
+        grantedActions: [],
     };
     refreshTimerId = 0;
     extra = {};
@@ -42,6 +46,7 @@ export default class FastGrid extends Component {
         this.applyLocalFilter = this.applyLocalFilter.bind(this);
         this.popstate = this.popstate.bind(this);
         this.popstate(true);
+        this.isGranted = this.isGranted.bind(this);
     }
     popstate(isctor) {
         if (!this) return;
@@ -65,6 +70,7 @@ export default class FastGrid extends Component {
         this.extra.retrievePath = `${this.props.path}/retrieve`;
         this.extra.createPath = `${this.props.path}/create`;
         this.extra.editPath = `${this.props.path}/edit`;
+        this.extra.detailPath = `${this.props.path}/detail`;
         this.extra.deletePath = `${this.props.path}/delete`;
         this.extra.getPath = ((action) => (`${this.props.path}/${action}`)).bind(this);
         this.extra.execute = async (path, ...args) => {
@@ -152,9 +158,11 @@ export default class FastGrid extends Component {
                 }
             };
             await datasource.retrieve();
+            var isAccessGranted = datasource.rawResult && datasource.rawResult.status === 403 ? false : true;
             var newPagination = (datasource.rawResult || {}).pagination;
             this.setState({
-                data: []
+                data: [],
+                accessGranted: isAccessGranted
             }, () => {
                 this.setState({
                     data: datasource.records || [],
@@ -169,9 +177,60 @@ export default class FastGrid extends Component {
         }
     }
     async refreshList() {
-        this.setState({ loading: true, data: null });
+        this.setState({ loading: true, data: null, accessGranted: true });
+        const actions = [];
+        const actionMap = {};
+        if (this.props.actions) {
+            for (var action of this.props.actions) {
+                actions.push({
+                    className: this.props.path,
+                    actionName: action.action
+                });
+                actionMap[action] = actions.length - 1;
+            }
+            for (var action of this.props.multiActions) {
+                actions.push({
+                    className: this.props.path,
+                    actionName: action.action
+                });
+                actionMap[action] = actions.length - 1;
+            }
+        }
+        if (this.props.create) {
+            actions.push({
+                className: this.props.path,
+                actionName: "create"
+            });
+            actionMap["props_create"] = actions.length - 1;
+        }
+        if (this.props.edit) {
+            actions.push({
+                className: this.props.path,
+                actionName: "edit"
+            });
+            actionMap["props_edit"] = actions.length - 1;
+        }
+        if (this.props.delete) {
+            actions.push({
+                className: this.props.path,
+                actionName: "delete"
+            });
+            actionMap["props_delete"] = actions.length - 1;
+        }
+
+        const actionResult = await getPermissionBuilder().checkset(actions);
+
+        this.setState({
+            grantedActions: actionResult && actionResult.filter(item => item.status === 200).map((item, index) => {
+                return actions[index].actionName;
+            })
+        });
+
         await this.retrieveData.call(this);
         setTimeout(() => { this.setState({ loading: false }); }, 500);
+    }
+    isGranted(actionName) {
+        return this.state.grantedActions && this.state.grantedActions.indexOf(actionName) > -1;
     }
     onResize() {
 
@@ -250,6 +309,7 @@ export default class FastGrid extends Component {
         });
     }
     render() {
+        const titlePlural = translate(this.props.titlePlural);
         const title = translate(this.props.title);
         const pageSizes = this.props.pageSizes || [10, 20, 50, 100];
         var data = (this.state.filtered && this.state.filtered.data) || [];
@@ -284,18 +344,38 @@ export default class FastGrid extends Component {
             }, this.refreshList.bind(this));
         };
         if (this.props.edit) {
-            actions = [...(actions ?? []), (props) => (<FastForm.Edit onClick={() => {
+            var editAction = (props) => (<FastForm.Edit onClick={() => {
                 var canChange = CanChangePage(this.props);
                 if (canChange !== null) {
                     window.location = window.location.toString().split('#')[0] + "#q=e.." + props.data[idSelector];
                 }
                 this.setState({ mode: 'edit', editData: props.data });
-            }} />)];
+            }} />);
+            editAction.action = "edit";
+            actions = [...(actions ?? []), editAction];
         }
         if (this.props.delete) {
-            actions = [...(actions ?? []), (props) => (<FastForm.Delete />)];
+            var deleteAction = (props) => (<FastForm.Delete />);
+            deleteAction.action = "delete";
+            actions = [...(actions ?? []), deleteAction];
         }
-        const multiActions = this.props.multiActions;
+        if(actions){
+        actions = actions.filter(p => {
+            if (!p.action) return true;
+
+            if (p.action && this.isGranted(p.action)) return true;
+            return false;
+        });
+        }
+        var multiActions = this.props.multiActions;
+        if (multiActions) {
+            multiActions = multiActions.filter(p => {
+                if (!p.action) return true;
+
+                if (p.action && this.isGranted(p.action)) return true;
+                return false;
+            });
+        }
         const keySelector = this.keySelector.call(this);
         const checkboxEnabled = this.props.checked !== null && this.props.checked !== undefined ? Boolean(this.props.checked) : false;
         const _children = (this.props && this.props.children && this.props.children.length > 0 ? this.props.children : [this.props.children]).filter((child) => {
@@ -314,11 +394,16 @@ export default class FastGrid extends Component {
         const elevation = chooseOne(this.props.elevation, 5);
 
         return (<div className="card" style={{ marginBottom: 10, borderRadius: 10, boxShadow: getElevation(elevation, chooseOne(this.props.elevationColor, '#000')) }}>
+            <AccessDenied show={this.state.accessGranted === false} />
             <Loading show={loading} />
             <div className="card-header" style={{ borderTopLeftRadius: 10, borderTopRightRadius: 10 }}>
-                <div>
+                <div style={this.state.accessGranted === false ? {
+                    position: 'relative',
+                    zIndex: 11,
+                    color: 'white !important'
+                } : null}>
                     <div className="row" style={{ margin: 0, marginBottom: 10 }}>
-                        <div className="col"> <h4 className="card-title">{title}</h4></div>
+                        <div className="col"> <h4 className="card-title">{titlePlural || title}</h4></div>
                         <div><i onClick={this.refreshList.bind(this)} className="bi bi-arrow-clockwise btn btn-outline-dark" style={{ padding: '10px 20px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem' }}></i></div>
                     </div>
                 </div>
@@ -328,7 +413,7 @@ export default class FastGrid extends Component {
                         {showSearch && <FastGridSearchBox block style={{ maxWidth: isMobile ? '100%' : 300 }} data={data} filteredData={filteredData} value={this.state.searchText} setValue={(v) => { this.setState({ searchText: v }, this.refreshListDelayed.bind(this, 400)) }}></FastGridSearchBox>}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        {showCreate && <FastGridCreate {...this.props} path={apiPath} setMode={this.setMode.bind(this)} />}
+                        {showCreate && this.isGranted("create") && <FastGridCreate {...this.props} path={apiPath} setMode={this.setMode.bind(this)} />}
                     </div>
                 </div>
             </div>
@@ -415,7 +500,7 @@ export default class FastGrid extends Component {
 
                 <div>
                     <div style={{ float: 'left' }}>
-                        <label className="font-weight-bold font-size-xs text-muted">{translate("DATAGRID.STATUS.NRECORD").replace("%n%", rawData.length)}</label>
+                        <label className="font-weight-bold font-size-xs text-muted">{translate("DATAGRID.STATUS.NRECORD").replace("%n%", this.state.pagination ? this.state.pagination.count : rawData.length)}</label>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
                         <div style={{ marginRight: 3 }}>
@@ -470,7 +555,7 @@ class FastPagination extends Component {
         var endIndex = Math.min(pageCount, startIndex + stepCount);
 
         if (startIndex > 0) items.push(["<<", 0]);
-        if (page > startIndex && startIndex > 0) {
+        if (page > 1 && stepCount === 6) {
             items.push(["...", Math.max(0, startIndex)]);
         }
         for (var i = 0; i < stepCount; i++) {

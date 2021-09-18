@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { getElevation } from '../utils';
+import { getElevation, getFileProvider } from '../utils';
 import { CustomField } from './CustomField'
 import Loading from './Loading';
 import color from 'color';
@@ -26,25 +26,25 @@ export default class ImageField extends CustomField {
         this.imageBackfield.onloadstart = this.imageOnLoadStart.bind(this);
         this.imageBackfield.onload = this.imageOnLoad.bind(this);
         this.componentDidUpdate.call(this);
+        this.imageOnLoadStart.call(this);
     }
     async imageOnLoadStart() {
         this.setState({ show: true });
-
-        const blob = await fetch(this.currentSrc,
-            {
-                method: 'GET'
-            }).then((x) => x.blob()).catch(console.error);
-        try {
-            var reader = new FileReader();
-            reader.onloadend = (function () {
-                var base64data = reader.result;
-                this.imageUrl = base64data;
-                this.imageOnLoad.call(this);
-            }).bind(this);
-            reader.readAsDataURL(blob);
-        } catch (err) {
-            console.error(err);
+        if (this.props.value) {
+            const fileProvider = getFileProvider();
+            const result = await fileProvider.download(this.props.value);
+            console.log(result);
+            if (result && result.success && result.data) {
+                this.setState({ backgroundImage: result.data.base64Data, show: false });
+            }
+            else{
+                this.setState({ show: false });
+            }
         }
+        else{
+            this.setState({ show: false });
+        }
+        this.currentSrc = this.props.value;
     }
     imageOnLoad() {
         this.setState({ show: false });
@@ -62,7 +62,7 @@ export default class ImageField extends CustomField {
             boxShadow: getElevation(elevation || 1, elevationColor),
             border: `1px solid ${color(elevationColor || '#000').alpha(0.1)}`,
             ...getImageSize(size),
-            backgroundImage: `url(${this.imageUrl})`,
+            backgroundImage: `url(${this.state.backgroundImage})`,
             backgroundSize: mode || 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',

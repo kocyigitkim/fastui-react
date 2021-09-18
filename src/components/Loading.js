@@ -23,7 +23,7 @@ export default class Loading extends Component {
 
         return (
             <div style={{ opacity: (this.props.show ? 1 : 0), pointerEvents: (this.props.show ? 'all' : 'none'), color: (this.props.color || 'black'), backgroundColor: backColor }} className={LoadingCSS.__react__loadingcontent}>
-                <div style={{ zIndex: 400002, position: 'relative' }}>
+                <div style={{ zIndex: 3, position: 'relative' }}>
                     <div style={{ display: 'block', display: 'flex', justifyContent: 'center', margin: 20 }}>
                         <Spinner radius={25} stroke={3} {...this.props} children={null}></Spinner>
                     </div>

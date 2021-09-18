@@ -23,14 +23,16 @@ export class TextField extends CustomField {
     }
     form(props) {
         var newProps = {};
-        var { type, placeholder, title, value, description } = newProps = { ...this.props, ...props };
+        var { type, placeholder, title, value, description, multiline } = newProps = { ...this.props, ...props };
         const translated = translate(title);
         if (type == "date" || type == "datetime") {
             value = value !== undefined && value !== null && moment(value).toDate();
         }
         return <div className="form-group">
             {title && <div className="form-label">{translated}</div>}
-            <input className="form-control" {...newProps} title={translated} />
+            {multiline ? (
+                <textarea className="form-control" {...newProps} title={translated}></textarea>
+            ) : (<input className="form-control" {...newProps} title={translated} />)}
             {description && <div className="text-muted">{translate(description)}</div>}
         </div>;
     }

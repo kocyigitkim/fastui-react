@@ -39,7 +39,10 @@ export class FastForm extends Component {
         var response = await api.execute(this.props.path, action, request, "POST");
         await new Promise(resolve => setTimeout(resolve, 1000));
         if (!response || response.success === false) {
-            var errMessage = translate(response ? response.message : 'FORM.SAVE.ERROR');
+            var errMessage = translate(response ?
+                response.fields && response.fields.length > 0 ? (response.fields[0].code)
+                    : response.message
+                : 'FORM.SAVE.ERROR');
             toast.error(errMessage);
         }
         else {
@@ -78,6 +81,19 @@ export class FastForm extends Component {
     async actionOnClick(action) {
         action = action.action;
         var request = { ...this.props.extraArgs, ...this.getState().fields };
+
+        for (var fieldName in request) {
+            var fieldValue = request[fieldName];
+            if (Array.isArray(fieldValue)) {
+                fieldValue = fieldValue.map(item => {
+                    return processFieldValue(item);
+                });
+            }
+            else {
+                fieldValue = processFieldValue(fieldValue);
+            }
+            request[fieldName] = fieldValue;
+        }
 
         const context = {
             action: action,
@@ -150,6 +166,16 @@ export class FastForm extends Component {
     }
 }
 
+function processFieldValue(value) {
+    if (value === null || value === undefined) return value;
+    if (typeof value === 'object') {
+        if (value.fastuiField) {
+            return value.fastuiField(value);
+        }
+    }
+    return value;
+}
+
 FastForm.Actions = class FastFormActions extends Component {
     render() {
         return <div className="card-footer" style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end' }}>
@@ -197,6 +223,12 @@ FastForm.Edit = class FastFormEditAction extends Component {
     }
 }
 
+FastForm.View = class FastFormViewAction extends Component {
+    static action = 'detail';
+    render() {
+        return <FastForm.CustomAction className="btn btn-outline-dark" title="FORM.VIEW" {...this.props} style={{ padding: '7px 20px', ...this.props.style }}><i className="bi bi-arrow-up-right-square mr-2"></i></FastForm.CustomAction>;
+    }
+}
 
 FastForm.ActiveDeactive = class FastFormActiveDeactiveAction extends Component {
     static action = 'setstate';

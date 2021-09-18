@@ -51,6 +51,7 @@ export class RemoteDataSource extends IDataSource {
             return true;
         }
         var result = await global.window.fastui.apiHandler.execute(this.className, this.actionName, generatedArgs, this.method);
+        this.rawResult = result;
         if (result && (result.success || result.Success)) {
             this.rawResult = result;
             result = result.data || result.result || result.results || result.Data || result.Result || result.Results;

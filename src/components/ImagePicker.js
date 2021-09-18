@@ -1,10 +1,12 @@
 import React from 'react';
 import { CustomField } from "./CustomField";
-import { translate } from '../utils';
+import { getFileProvider, translate } from '../utils';
 import filesize from 'filesize'
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { v4 as uuid } from 'uuid';
 import { ReactBridge } from '../ReactBridge';
+import toast from 'react-hot-toast';
+import { Loading } from '..';
 
 const reorder = (list, startIndex, endIndex) => {
     const result = Array.from(list);
@@ -18,7 +20,8 @@ const reorder = (list, startIndex, endIndex) => {
 export class ImagePickerField extends CustomField {
     state = {
         files: [],
-        dragEntered: false
+        dragEntered: false,
+        loading: false
     }
     __id = uuid();
 
@@ -43,6 +46,7 @@ export class ImagePickerField extends CustomField {
         this.setState({ dragEntered: false, files: await this.processFiles.call(this, e.dataTransfer.files || []) });
     }
     async processFiles(files) {
+        this.setState({ loading: true });
         const toBase64 = file => new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
@@ -57,12 +61,23 @@ export class ImagePickerField extends CustomField {
                 continue;
             }
             file.base64Data = await toBase64(file).catch(console.error);
+            const fileProvider = getFileProvider();
+            var result = await fileProvider.upload(file, (file) => file.base64Data);
+            if (result.success) {
+                file.fileId = result.fileId;
+            } else {
+                toast.error(translate(result.message));
+                continue;
+            }
+            file.fastuiField = ((self) => {
+                return self.fileId;
+            }).bind(file, file);
             newFiles.push(file);
         }
 
         if (this.props.onChange) this.props.onChange(newFiles);
         this.fileUpload.value = "";
-
+        this.setState({ loading: false });
         return newFiles;
     }
     uploadFile() {
@@ -72,6 +87,33 @@ export class ImagePickerField extends CustomField {
         this.setState({
             files: await this.processFiles.call(this, evt.target.files)
         });
+    }
+    async componentDidMount() {
+        if (super.componentDidMount) super.componentDidMount();
+        if (this.props.value) {
+            this.setState({ loading: true });
+            var files = [];
+            for (var i = 0; i < this.props.value.length; i++) {
+                var fileId = this.props.value[i];
+                const fileProvider = getFileProvider();
+                var result = await fileProvider.download(fileId);
+                if (result.success) {
+                    var file = {
+                        fileId: fileId,
+                        name: result.data.name,
+                        size: result.data.size,
+                        type: result.data.type,
+                        base64Data: result.data.base64Data
+                    };
+                    file.fastuiField = ((self) => {
+                        return self.fileId;
+                    }).bind(file, file);
+
+                    files.push(file);
+                }
+            }
+            this.setState({ files: files, loading: false });
+        }
     }
     form() {
         const { title, description, mini, multi, value } = this.props;
@@ -89,6 +131,7 @@ export class ImagePickerField extends CustomField {
         const firstFile = Array.isArray(this.state.files) ? this.state.files[0] : null;
 
         return <div className="form-group">
+            <Loading show={this.state.loading} />
             <input accept="image/*" onChange={this.handleFileUpload.bind(this)} multiple={multi} type="file" ref={(r) => this.fileUpload = r} style={{ display: 'none' }} />
             <label className="text-dark font-weight-bold text-lg mb-2">{translate(title)}</label>
             <div {...dragProps} className="border border-secondary rounded p-3" style={{ minHeight: 100, maxHeight: 300, overflow: 'hidden', overflowY: 'auto', position: 'relative' }}>

@@ -4,7 +4,8 @@ import { PermissionBuilder } from "./PermissionBuilder";
 import color from 'color';
 
 import select2totreePackage from './select2totree.js';
-
+import State from 'faststate-react/states/State';
+import { FileProvider } from "./FileProvider";
 
 export function initializeSelect2ToTree(jQuery) {
     select2totreePackage(jQuery);
@@ -15,6 +16,13 @@ export function initializeSelect2ToTree(jQuery) {
  */
 export function getApiHandler() {
     return global.window.fastui.apiHandler;
+}
+/**
+ * 
+ * @returns {FileProvider}
+ */
+export function getFileProvider(){
+    return global.window.fastui.fileProvider;
 }
 /**
  * 
@@ -50,4 +58,14 @@ export function toTitleCase(str) {
             return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
         }
     );
+}
+
+/** @returns {State} */
+export function getDialogContainer(){
+    if(!global.window.fastui.dialogContainer){
+        var state = new State();
+        state.dialogs = [];
+        global.window.fastui.dialogContainer = state;
+    }
+    return global.window.fastui.dialogContainer;
 }
