@@ -3,7 +3,8 @@ import { chooseOne, getElevation, toTitleCase, translate } from '../utils';
 import Loading from './Loading'
 import { getApiHandler } from './../utils';
 import toast from 'react-hot-toast';
-import { DynoState, DynoValue } from 'faststate-react/states/DynoState';
+import { DynoState } from 'faststate-react/states/DynoState';
+
 
 export class FastForm extends Component {
     state = {
@@ -138,31 +139,48 @@ export class FastForm extends Component {
     }
 
     render() {
-        const { title, loading, actions, headerActions, outlined, submit, elevation, elevationColor } = this.props;
-        const shadowConfig = getElevation(chooseOne(elevation, 5), chooseOne(elevationColor, '#000'));
-
-        return (
-            <form ref={(r => this.frm = r)} method="post" >
-                <div className="card" style={{ borderRadius: 10, boxShadow: outlined ? null : shadowConfig }}>
-                    <Loading show={this.props.loading || this.state.loading}>{translate(loading || "FORM.LOADING")}</Loading>
-                    {(title || headerActions) && <div className="card-header" style={{ borderTopLeftRadius: 10, borderTopRightRadius: 10 }}>
-                        <div style={{ display: 'flex' }}>
-                            <h5 style={{ flex: 1 }} className="card-title">{translate(title)}</h5>
-                            {headerActions && (<div>
-                                {headerActions.map((Action, index) => <Action onClick={this.actionOnClick.bind(this, Action)} key={"k" + index} style={{ margin: 5 }} form={this}></Action>)}
-                            </div>)}
+        const { title, loading, actions, headerActions, outlined, contentOnly, elevation, elevationColor } = this.props;
+        var shadowConfig = getElevation(chooseOne(elevation, 5), chooseOne(elevationColor, '#000'));
+        if (contentOnly) {
+            shadowConfig = null;
+            return (
+                <form ref={(r => this.frm = r)} method="post" >
+                    <div style={{ borderRadius: 10, boxShadow: outlined ? null : shadowConfig }}>
+                        <Loading show={this.props.loading || this.state.loading}>{translate(loading || "FORM.LOADING")}</Loading>
+                        <div {...this.props.cardBody}>
+                            {typeof this.props.children === 'function' ? this.props.children.call(this, this) : this.props.children}
                         </div>
+                        {actions && (<FastForm.Actions contentOnly>
+                            {actions.map((Action, index) => <Action onClick={this.actionOnClick.bind(this, Action)} key={"k" + index} style={{ margin: 5 }} form={this}></Action>)}
+                        </FastForm.Actions>)}
                     </div>
-                    }
-                    <div className="card-body" {...this.props.cardBody}>
-                        {typeof this.props.children === 'function' ? this.props.children.call(this, this) : this.props.children}
+                </form>
+            )
+        }
+        else {
+            return (
+                <form ref={(r => this.frm = r)} method="post" >
+                    <div className="card" style={{ borderRadius: 10, boxShadow: outlined ? null : shadowConfig }}>
+                        <Loading show={this.props.loading || this.state.loading}>{translate(loading || "FORM.LOADING")}</Loading>
+                        {(title || headerActions) && <div className="card-header" style={{ borderTopLeftRadius: 10, borderTopRightRadius: 10 }}>
+                            <div style={{ display: 'flex' }}>
+                                <h5 style={{ flex: 1 }} className="card-title">{translate(title)}</h5>
+                                {headerActions && (<div>
+                                    {headerActions.map((Action, index) => <Action onClick={this.actionOnClick.bind(this, Action)} key={"k" + index} style={{ margin: 5 }} form={this}></Action>)}
+                                </div>)}
+                            </div>
+                        </div>
+                        }
+                        <div className="card-body" {...this.props.cardBody}>
+                            {typeof this.props.children === 'function' ? this.props.children.call(this, this) : this.props.children}
+                        </div>
+                        {actions && (<FastForm.Actions>
+                            {actions.map((Action, index) => <Action onClick={this.actionOnClick.bind(this, Action)} key={"k" + index} style={{ margin: 5 }} form={this}></Action>)}
+                        </FastForm.Actions>)}
                     </div>
-                    {actions && (<FastForm.Actions>
-                        {actions.map((Action, index) => <Action onClick={this.actionOnClick.bind(this, Action)} key={"k" + index} style={{ margin: 5 }} form={this}></Action>)}
-                    </FastForm.Actions>)}
-                </div>
-            </form>
-        )
+                </form>
+            )
+        }
     }
 }
 
@@ -178,9 +196,17 @@ function processFieldValue(value) {
 
 FastForm.Actions = class FastFormActions extends Component {
     render() {
-        return <div className="card-footer" style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end' }}>
-            {this.props.children}
-        </div>;
+        const contentOnly = this.props.contentOnly;
+        if (contentOnly) {
+            return <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end' }}>
+                {this.props.children}
+            </div>;
+        }
+        else {
+            return <div className="card-footer" style={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end' }}>
+                {this.props.children}
+            </div>;
+        }
     }
 };
 

@@ -6,7 +6,7 @@ import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { v4 as uuid } from 'uuid';
 import { ReactBridge } from '../ReactBridge';
 import toast from 'react-hot-toast';
-import { Loading } from '..';
+import Loading from './Loading';
 
 const reorder = (list, startIndex, endIndex) => {
     const result = Array.from(list);
@@ -56,7 +56,6 @@ export class ImagePickerField extends CustomField {
         var newFiles = [...this.state.files];
         for (var i = 0; i < files.length; i++) {
             var file = files[i];
-            file.id = uuid();
             if (!file.type.startsWith("image/")) {
                 continue;
             }
@@ -69,6 +68,7 @@ export class ImagePickerField extends CustomField {
                 toast.error(translate(result.message));
                 continue;
             }
+
             file.fastuiField = ((self) => {
                 return self.fileId;
             }).bind(file, file);
@@ -89,30 +89,47 @@ export class ImagePickerField extends CustomField {
         });
     }
     async componentDidMount() {
-        if (super.componentDidMount) super.componentDidMount();
-        if (this.props.value) {
-            this.setState({ loading: true });
-            var files = [];
-            for (var i = 0; i < this.props.value.length; i++) {
-                var fileId = this.props.value[i];
-                const fileProvider = getFileProvider();
-                var result = await fileProvider.download(fileId);
-                if (result.success) {
-                    var file = {
-                        fileId: fileId,
-                        name: result.data.name,
-                        size: result.data.size,
-                        type: result.data.type,
-                        base64Data: result.data.base64Data
-                    };
-                    file.fastuiField = ((self) => {
-                        return self.fileId;
-                    }).bind(file, file);
-
-                    files.push(file);
+        try {
+            if (super.componentDidMount) super.componentDidMount();
+            if (this.props.value) {
+                this.setState({ loading: true });
+                var files = [];
+                var values = this.props.value;
+                if (!Array.isArray(this.props.value)) {
+                    values = [values];
                 }
+                for (var i = 0; i < values.length; i++) {
+                    var fileId = values[i];
+                    const fileProvider = getFileProvider();
+                    var result = await fileProvider.download(fileId);
+                    if (result.success) {
+                        var file = {
+                            fileId: fileId,
+                            name: result.data.name,
+                            size: result.data.size,
+                            type: result.data.type,
+                            base64Data: result.data.base64Data
+                        };
+                        file.fastuiField = ((self) => {
+                            return self.fileId;
+                        }).bind(file, file);
+
+                        files.push(file);
+                    }
+                }
+                this.setState({ files: files, loading: false });
             }
-            this.setState({ files: files, loading: false });
+        } catch (err) { }
+    }
+    async componentDidUpdate() {
+        if (this.props.value) {
+            if (this.props.value.length > 0 && this.state.files.length === 0) {
+                if (this.inited) return;
+                this.inited = true;
+                this.componentDidMount.call(this);
+            }
+        }
+        else {
         }
     }
     form() {
@@ -129,12 +146,20 @@ export class ImagePickerField extends CustomField {
         };
 
         const firstFile = Array.isArray(this.state.files) ? this.state.files[0] : null;
+        const addButton = multi && this.state.files.length > 0 ? (
+            <div className="p-2">
+                <div style={{ float: 'right', height: '100%' }}>
+                    <button onClick={this.uploadFile.bind(this)} type="button" className="btn btn-primary btn-size-lg" style={{ height: 70, minWidth: 100 }}><i className="bi bi-upload"></i> {translate("IMAGEPICKER.EMPTY.UPLOAD")}</button>
+                </div>
+                <p>{emptyDesc}</p>
+            </div>
+        ) : null;
 
         return <div className="form-group">
             <Loading show={this.state.loading} />
             <input accept="image/*" onChange={this.handleFileUpload.bind(this)} multiple={multi} type="file" ref={(r) => this.fileUpload = r} style={{ display: 'none' }} />
             <label className="text-dark font-weight-bold text-lg mb-2">{translate(title)}</label>
-            <div {...dragProps} className="border border-secondary rounded p-3" style={{ minHeight: 100, maxHeight: 300, overflow: 'hidden', overflowY: 'auto', position: 'relative' }}>
+            <div {...dragProps} className="border border-secondary rounded p-3" style={{ minHeight: 100, maxHeight: this.props.disableMaxHeight ? 'none' : 300, overflow: 'hidden', overflowY: 'auto', position: 'relative' }}>
                 {isEmpty ? (<div className="p-2">
                     <div style={{ float: 'right', height: '100%' }}>
                         <button onClick={this.uploadFile.bind(this)} type="button" className="btn btn-primary btn-size-lg" style={{ height: 70, minWidth: 100 }}><i className="bi bi-upload"></i> {translate("IMAGEPICKER.EMPTY.UPLOAD")}</button>
@@ -148,6 +173,7 @@ export class ImagePickerField extends CustomField {
                     <i className="bi bi-mouse3 font-weight-bold text-dark" style={{ fontSize: '2rem' }}></i>
                     <label className="font-weight-bold text-dark mt-3">{translate("IMAGEPICKER.DRAGDROP.MESSAGE")}</label>
                 </div>
+                {addButton}
             </div>
             {description && <label className="text-muted font-italic mt-2 font-weight-bold" style={{ fontSize: '0.8rem' }}>{description}</label>}
         </div>;
@@ -168,7 +194,9 @@ export class ImagePickerField extends CustomField {
 
         this.setState({
             files: items
-        });
+        }, this.props.onChange && (() => {
+            this.props.onChange(this.state.files.map(f => f.fileId));
+        }));
     }
 
     renderMulti() {
@@ -183,7 +211,7 @@ export class ImagePickerField extends CustomField {
                             style={{ ...snapshot.isDraggingOver }}
                         >
                             {files.map((item, index) => (
-                                <Draggable key={item.id} draggableId={item.id} index={index}>
+                                <Draggable key={item.fileId} draggableId={item.fileId} index={index}>
                                     {(provided, snapshot) => (
                                         <div
                                             ref={provided.innerRef}
@@ -217,7 +245,7 @@ export class ImagePickerField extends CustomField {
                 </div>
             </div>
             <div className="col-sm-12 col-xs-6 col-md-6">
-                <button onClick={() => { this.setState({ files: this.state.files.filter((item) => item.id != firstFile.id), dragEntered: false }); }} type="button" className="btn btn-outline-danger btn-size-lg"
+                <button onClick={() => { this.setState({ files: this.state.files.filter((item) => item.fileId != firstFile.fileId), dragEntered: false }); }} type="button" className="btn btn-outline-danger btn-size-lg"
                     style={{ height: compact ? 70 : '100%', minWidth: compact ? 70 : 100, float: 'right' }}><i className="bi bi-trash"></i>{translate('IMAGEPICKER.FILLED.REMOVE')}</button>
             </div>
         </div>;

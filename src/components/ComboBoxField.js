@@ -4,7 +4,7 @@ import { chooseOne, initializeSelect2ToTree, translate } from '../utils';
 import { CustomField } from "./CustomField";
 import ReactSelect from 'react-select2-wrapper'
 import { v4 as uuid } from 'uuid';
-
+import Loading from './Loading'
 export default class ComboBoxField extends CustomField {
     state = {
         options: [],
@@ -41,7 +41,9 @@ export default class ComboBoxField extends CustomField {
                 dataSource.args[kv] = v.bind(this);
             }
         }
-
+        dataSource.onBeginRetrieve.add(() => {
+            this.setState({ loading: true });
+        });
         dataSource.onRetrieve.add(((sender, args) => {
             this.setState({
                 options: dataSource.records.map(item => ({
@@ -80,7 +82,7 @@ export default class ComboBoxField extends CustomField {
                         id: valueSelector(record),
                         text: labelSelector(record)
                     };
-                    if(Array.isArray(selectedValues) && selectedValues.indexOf(newRecord.id)>-1){
+                    if (Array.isArray(selectedValues) && selectedValues.indexOf(newRecord.id) > -1) {
                         newRecord.selected = true;
                     }
                     for (var i = 0; i < subitems.length; i++) {
@@ -149,6 +151,7 @@ export default class ComboBoxField extends CustomField {
         const existsValue = Boolean(value !== null && value !== undefined && (Array.isArray(value) ? value.length > 0 : true));
         return (
             <div className="form-group">
+                <Loading show={this.state.loading} />
                 {title && <div className="form-label">{translated}</div>}
                 <div style={{ display: 'flex', width: '100%' }}>
                     <div style={{ flex: 1 }}>

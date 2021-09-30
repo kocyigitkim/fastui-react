@@ -1,13 +1,11 @@
-import React from 'react';
-import { Fragment } from 'react';
-import { Component } from 'react';
+import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 
 export class ReactBridge extends Component {
-    renderBridge(){
+    renderBridge() {
         ReactDOM.render(this.props.children, this.bridgeContainer);
     }
-    componentDidUpdate(){
+    componentDidUpdate() {
         this.renderBridge.call(this);
     }
     render() {

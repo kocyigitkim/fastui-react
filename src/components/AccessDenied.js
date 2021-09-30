@@ -1,6 +1,6 @@
 import Color from 'color';
 import React, { Component } from 'react'
-import { translate } from '..';
+import { translate } from '../utils';
 
 export default class AccessDenied extends Component {
     componentDidMount() {

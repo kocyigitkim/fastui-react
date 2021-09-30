@@ -1,11 +1,11 @@
-import React, { Component, useState } from 'react'
+import React, { useState } from 'react'
 import { CustomField } from './CustomField'
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet'
 import L, { LatLng, Map } from 'leaflet'
 import { ReactBridge } from '../ReactBridge';
 import { registerStylesheet } from '../utils';
-import { translate } from '..';
-import { Field } from '../index'
+import { translate } from '../utils';
+import { Field } from './Field'
 
 const GoogleMarkerBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABUAAAAlCAYAAACtbaI7AAAACXBIWXMAAA7DAAAOwwHHb6hkAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAABDVJREFUSImllU1oXFUYht/v3Ds/d7RpJdOkVYu/TZqJUsEks22pdCV2URDFbZeKC0FcuuhOEeuiFV1KMFKsUBFraWn8wTTDJNTI2CYWCp0E8p9MJ3PnnnPuOZ+L0dDMvUkm8V2+9/2ec77zdwmbqJTP58jaNwX4FIgeZ6CNmBcAmmKyl4TB191jY4txtdRs/J3PP2ms+ZSB0ynXlW2JRCohHDhE0GyhjEFFSmUAAbbnrB982FsqrW0KLfX3nxDgy2nHcQ9kHkmmXTe+DWZUtcacX1MGWGZjT/aMjf0Zgd7p63uNBX3bnkw5+z2PQJEmIrLMmPVrYVUpaYV9JTc6fnMd+lc+f5isuZVNe17W87anNc161vdtRatlTeKFF0dH5wQAkDXnM24isWMgABChM5MRSSHaEtacAwC6MzDQx2wLz7S1UcqJX8MVKbFYr2O/52FfKhWb8cMQ9x9ULIFyroV9PeO6KuW4kbQ0BoNTU7heLoPRWKsThw7hra4upBxnQzbjuki5CSXD8A3hAK8+mkjEDv/V5CSu/QsEAAZwrVzG4NRU7Gz3JBNpQTglGPREUjiRwFIQ4Mb0dGzx9XIZy1JG/KRwwERPCwYyIub4zPn++gybxQBma7WI7xCBgT2CgJrlaHl7Or0JsqGs50U8ywwCaoKYp5U1kUBnJoP+jo5Y4EBnJzpioNpaEPOsYPAvvtY6rvhMby+OZrMbvJeyWZzJ5WIHq5swZObf6Hb+5ZNk6cfn9z0mnJi1ZQB3V1cxX6+jM5PBc3v3Rl8hNFq/W1k1bPk03Th2zD1YW7uf9byD7eloS61qRUrM1/0VU/MPiOPDw6EFnV0KAm3Y7gpombFY9xUzPuotlZQAAN/aLxmYWQqCXVGXZcCWuaKk/AwABAD0jY1pWH53JQig7M64ITOWgsBYxntHJyZq61AAOFIsXgaJ3xd8P9wJdMH3DYBST7E4+J8nHg4Q8HZVK8cPY09YRNIYVGQgDMw7BKy3uAHaXSj8QaDBOd9XiLllzZrza0oQfugtjP/6sC+ag+S6Hyhj8CD+PqxrTSvUtXbJ4febv0Wg3SMjM8z4eN6vqa2g80EgAXzRdXP89rbQhis+CZlpTcdzfa2htU5QInk2tjzO7CkUlgh0aUXK2DVYVcrAca50j4zMtAwFAGb+vKaUq5vOrWFGVUlYNuc3q90U2lMsDhOJexW18YWvyABEtNjz1LNXdgwFAAYurDY2ZF2rSkpr+QJdvBh9hFuBukIMhczJwDQumTQGytgUAUNb1W0JPTw6Ok1EE1XVOAVVpUCgySPF4uSuoQDAbIeqWgcAUA11wMRbzrIlqGX6SRmTlsZAhmGKyW66QS1Dc8XiLSKqLNTrIMCf89qK/xtKjd/U1SDUDBLfHB8e3vZp3BYKAGz5OwaWLezPreRbgtp6/XvDXGGmq63k/wF3xSzdL3ulrwAAAABJRU5ErkJggg==";
 

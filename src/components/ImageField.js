@@ -33,15 +33,14 @@ export default class ImageField extends CustomField {
         if (this.props.value) {
             const fileProvider = getFileProvider();
             const result = await fileProvider.download(this.props.value);
-            console.log(result);
             if (result && result.success && result.data) {
                 this.setState({ backgroundImage: result.data.base64Data, show: false });
             }
-            else{
+            else {
                 this.setState({ show: false });
             }
         }
-        else{
+        else {
             this.setState({ show: false });
         }
         this.currentSrc = this.props.value;

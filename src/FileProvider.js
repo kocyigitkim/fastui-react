@@ -1,4 +1,4 @@
-import { getApiHandler } from ".";
+import { getApiHandler } from "./utils";
 
 export class FileUploadResult {
     /**
@@ -103,7 +103,7 @@ export class RemoteFileProvider {
             data: data
         }, "post").catch(console.error);
         if (result && result.success) {
-            return new FileUploadResult(true, null, result.data.Id);
+            return new FileUploadResult(true, null, result.data.Id || result.data.id);
         }
         return new FileUploadResult(false, (result && result.message) || "FILE.UPLOAD.ERROR", null);
     }

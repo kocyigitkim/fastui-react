@@ -10,8 +10,9 @@ import { FastForm } from './components/Form'
 import { Field } from "./components/Field";
 import FastGrid from './components/FastGrid'
 import { TextField } from "./components/TextField"
+import { CustomField } from "./components/CustomField"
 import { ButtonField } from './components/ButtonField'
-import FastApi from 'fastapi-express-client'
+import * as FastApi from 'fastapi-express-client'
 import { ImagePickerField } from './components/ImagePicker';
 import ComboBoxField from './components/ComboBoxField';
 import { IDataSource, LocalDataSource, RemoteDataSource } from './DataSource';
@@ -28,12 +29,13 @@ import { translate, getApiHandler, getPermissionBuilder } from './utils'
 import { initPredefinedValidators, setValidator, validate, validateMultiple } from './validation';
 import { CheckBoxField } from './components/CheckBox'
 import MapPickerField from './components/MapPickerField'
-import {FastDialog} from './components/Dialog'
+import { FastDialog } from './components/Dialog'
 import { RemoteFileProvider } from './FileProvider'
 import LabelField from './components/LabelField'
 import AccessDenied from './components/AccessDenied'
+import State from 'faststate-react/states/State'
 
-function InitializeFastUI({ translate, apiHandler, redisEnabled, corsEnabled, permissionBuilder, fileProvider}) {
+function InitializeFastUI({ translate, apiHandler, redisEnabled, corsEnabled, permissionBuilder, fileProvider, useHistory, react }) {
     global.window.jQuery = JQUERY;
     global.jQuery = JQUERY;
     global.window.$ = JQUERY;
@@ -59,7 +61,7 @@ function InitializeFastUI({ translate, apiHandler, redisEnabled, corsEnabled, pe
         apiHandler.setCors();
     }
 
-    if(!fileProvider){
+    if (!fileProvider) {
         fileProvider = new RemoteFileProvider();
     }
 
@@ -68,6 +70,9 @@ function InitializeFastUI({ translate, apiHandler, redisEnabled, corsEnabled, pe
     }
 
     global.window.fastui = {
+        routerState: new State(),
+        useHistory,
+        react,
         translate,
         apiHandler,
         redisEnabled,
@@ -120,7 +125,7 @@ function registerCSS() {
 }
 
 .btn, button, input, select, .select2, .form-label, h1,h2,h3,h4,h5,h6, .alert {
-  animation: bootstrap-load-ani 300ms 1 ease;
+  /*animation: bootstrap-load-ani 300ms 1 ease;*/
 }
 
 @keyframes bootstrap-load-ani{
@@ -385,5 +390,6 @@ export {
     getPermissionBuilder,
     FastUIProvider,
     FastDialog,
-    AccessDenied
+    AccessDenied,
+    CustomField
 };

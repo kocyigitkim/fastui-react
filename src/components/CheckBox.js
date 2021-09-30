@@ -21,7 +21,6 @@ export class CheckBoxField extends CustomField {
         var newProps = {};
         const { type, placeholder, title, description, value } = newProps = { ...this.props, ...props };
         const translated = translate(title);
-        console.log('value', value);
         return <div className="form-group">
             {title && <div className="form-check-label" htmlFor={this.id}>{translated}</div>}
             {/* <input {...newProps} className="form-control" type="checkbox" data-toggle="toggle" checked={Boolean(value)} title={translated} id={this.id} data-off={translate("CHECKBOX.OFF")} data-on={translate("CHECKBOX.ON")} /> */}

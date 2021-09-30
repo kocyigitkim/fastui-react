@@ -1,6 +1,5 @@
 import { FastApiClient } from "fastapi-express-client";
-import { getApiHandler } from ".";
-import { EventBuilder } from "./EventBuilder";
+import { getApiHandler } from "./utils";
 
 export class PermissionBuilder {
     constructor({ path, className, actionName }) {

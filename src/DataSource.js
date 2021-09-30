@@ -2,10 +2,12 @@ import { EventBuilder } from './EventBuilder';
 export class IDataSource {
     records = [];
     onRetrieve = new EventBuilder();
+    onBeginRetrieve = new EventBuilder();
     get count() {
         return this.records.length;
     }
     async retrieve() {
+        await this.onBeginRetrieve.invoke(this);
         this.records = [];
         await this.onRetrieve.invoke(this, this.records);
         return false;
@@ -17,6 +19,7 @@ export class LocalDataSource extends IDataSource {
         this.records = records || [];
     }
     async retrieve() {
+        await this.onBeginRetrieve.invoke(this);
         await this.onRetrieve.invoke(this, this.records);
         return true;
     }
@@ -31,6 +34,7 @@ export class RemoteDataSource extends IDataSource {
         this.requiredArgs = requiredArgs;
     }
     async retrieve() {
+        await this.onBeginRetrieve.invoke(this);
         var generatedArgs = {};
         for (var k in this.args) {
             var v = this.args[k];
