@@ -21,7 +21,6 @@ export default class ComboBoxField extends CustomField {
     async componentDidMount() {
         if (this.inited) return;
         this.inited = true;
-
         this.setState({ loading: true });
 
         var labelSelector = this.props.labelSelector || ((k) => chooseOne(k.Name, k.Title, k.Label, k.name, k.title, k.label));

@@ -67,6 +67,7 @@
     "deep-equal": "^2.0.5",
     "fastapi-express-client": "^1.1.1",
     "faststate-react": "^1.1.1",
+    "file-saver": "^2.0.5",
     "filesize": "^7.0.0",
     "history": "^5.0.1",
     "jquery": "^3.6.0",
@@ -89,7 +90,8 @@
     "select2": "^4.1.0-rc.0",
     "sweetalert2": "^11.1.2",
     "sweetalert2-react-content": "^4.1.1",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "xlsx": "^0.17.2"
   },
   "resolutions": {
     "**/react": "16.13.1",

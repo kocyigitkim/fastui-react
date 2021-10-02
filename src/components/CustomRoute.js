@@ -7,7 +7,6 @@ export default class CustomRoute extends Component {
     componentDidMount() {
         this.getCurrentState = this.getCurrentState.bind(this);
     }
-
     render() {
         var { isMatched, location, a, isReset } = this.getCurrentState();
         var Content = this.props.component;
@@ -24,7 +23,7 @@ export default class CustomRoute extends Component {
         }
         return (
             <Fragment>
-                {(isMatched || this.props.override) ? ((typeof Content === 'function') ? <Content location={location}></Content> : Content) : null}
+                {(isMatched || this.props.override) ? ((typeof Content === 'function') ? <Content key={location.path} location={location}></Content> : Content) : null}
             </Fragment>
         )
     }

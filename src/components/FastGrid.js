@@ -1,16 +1,19 @@
-import React, { Component } from 'react'
+import React, { Component, Fragment } from 'react'
 import { chooseOne, getApiHandler, getElevation, getPermissionBuilder, isPermissionCheckEnabled, redirectTo, translate } from '../utils';
 import Styles from './styles/FastGrid.css'
 import Loading from './Loading'
 import { FastForm } from './Form'
 import { v4 as uuid } from 'uuid'
 import { DynoState } from 'faststate-react/states/DynoState';
-import { LocalDataSource } from '../DataSource';
+import { LocalDataSource, RemoteDataSource } from '../DataSource';
 import AccessDenied from './AccessDenied'
 import CustomRoute from './CustomRoute';
 import { RouteBuilder } from '../RouteBuilder';
 import { FastDialog } from './Dialog'
 import toast from 'react-hot-toast';
+import * as xlsx from 'xlsx'
+import moment from 'moment';
+import * as filesaver from 'file-saver'
 export default class FastGrid extends Component {
     state = {
         page: 0,
@@ -52,7 +55,7 @@ export default class FastGrid extends Component {
     }
     componentDidMount() {
         const key = `fastgrid-${this.props.title}-${this.props.path}-${this.props.hash}`;
-        this.__id = key;
+        this.__id = key.replace(/[\-\.]/g, '');
 
         this.extra.retrievePath = `${this.props.path}/retrieve`;
         this.extra.createPath = `${this.props.path}/create`;
@@ -163,10 +166,76 @@ export default class FastGrid extends Component {
             }, this.applyLocalFilter.bind(this, this.props.data || []));
         }
     }
+    async exportList() {
+        this.setState({ loading: true });
+        var source = this.props.datasource;
+        if (!source) return;
+
+        var datasource = new RemoteDataSource(source.className, source.actionName, source.method, source.args, source.requiredArgs);
+
+        const extraArgs = this.props.extraArgs;
+
+
+        datasource.args = {
+            ...datasource.args,
+            ...extraArgs,
+            pagination: null,
+            filter: this.state.filters,
+            search: this.state.searchText,
+            sort: {
+                column: this.state.orderColumn,
+                state: this.state.orderState
+            }
+        };
+        await datasource.retrieve();
+
+
+        const _children = (this.props && this.props.children && this.props.children.length > 0 ? this.props.children : [this.props.children]).filter((child) => {
+            if (!child) return false;
+            if ((child.props && child.props.hide || "").indexOf("grid") > -1) {
+                return false;
+            }
+            return true;
+        });
+
+
+        var fieldMap = [];
+        for (var field of _children) {
+            fieldMap.push([field.props.name, translate(field.props.title)]);
+        }
+
+        var book = xlsx.utils.book_new();
+        var sheet1 = xlsx.utils.json_to_sheet([]);
+        xlsx.utils.book_append_sheet(book, sheet1, 'Sheet1');
+        xlsx.utils.sheet_add_aoa(sheet1, [fieldMap.map(item => item[1])]);
+        var mappedData = datasource.records.map(row => {
+            var rowData = [];
+            for (var field of fieldMap) {
+                rowData.push(row[field[0]]);
+            }
+            return rowData;
+        });
+        xlsx.utils.sheet_add_aoa(sheet1, mappedData, { origin: 1 });
+        var filename = moment().format("YYYY-MM-DD HH-MM") + '.xlsx';
+        try {
+            var file = xlsx.writeFile(book, filename, { type: 'file' });
+            //    filesaver.saveAs(file, filename);
+        } catch (err) { console.error(err); }
+        this.setState({ loading: false });
+    }
     async refreshList() {
         this.setState({ loading: true, data: null, accessGranted: true });
         const actions = [];
         const actionMap = {};
+        const menuItems = this.props.menuItems;
+        if (Array.isArray(menuItems)) {
+            menuItems.forEach(item => {
+                if (item.action) {
+                    actions.push("menu-" + item.action);
+                    actionMap["menu-" + item.action] = item;
+                }
+            });
+        }
         if (this.props.actions && Array.isArray(this.props.actions)) {
             for (var action of this.props.actions) {
                 actions.push({
@@ -218,6 +287,7 @@ export default class FastGrid extends Component {
 
         await this.retrieveData.call(this);
         setTimeout(() => { this.setState({ loading: false }); }, 500);
+
     }
     isGranted(actionName) {
         if (!isPermissionCheckEnabled()) return true;
@@ -328,6 +398,7 @@ export default class FastGrid extends Component {
         const apiPath = this.props.path;
         const idSelector = this.props.idSelector || "Id";
         const extraArgs = this.props.extraArgs;
+        const menuItems = this.props.menuItems || [];
         const setFilter = (fieldName, filter) => { this.setState({ filters: { ...this.state.filters, [fieldName]: filter } }, this.refreshList.bind(this)); };
         const resetFilter = (fieldName) => {
             var filters = this.state.filters;
@@ -420,7 +491,12 @@ export default class FastGrid extends Component {
                         } : null}>
                             <div className="row" style={{ margin: 0, marginBottom: 10 }}>
                                 <div className="col"> <h4 className="card-title">{titlePlural || title}</h4></div>
-                                <div><i onClick={this.refreshList.bind(this)} className="bi bi-arrow-clockwise btn btn-outline-dark" style={{ padding: '10px 20px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1.1rem' }}></i></div>
+                                <div>
+                                    <i onClick={this.refreshList.bind(this)} className="bi bi-arrow-clockwise btn btn-outline-dark" style={{ padding: '10px 20px', margin: 1, cursor: 'pointer', fontWeight: 'bold', fontSize: '1.31rem' }}></i>
+                                </div>
+                                <div>
+                                    <i onClick={this.exportList.bind(this)} className="bi bi-cloud-download btn btn-outline-dark" style={{ padding: '10px 20px', margin: 1, cursor: 'pointer', fontWeight: 'bold', fontSize: '1.3rem' }}></i>
+                                </div>
                             </div>
                         </div>
 
