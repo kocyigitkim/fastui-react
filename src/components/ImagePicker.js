@@ -7,6 +7,7 @@ import { v4 as uuid } from 'uuid';
 import { ReactBridge } from '../ReactBridge';
 import toast from 'react-hot-toast';
 import Loading from './Loading';
+import { Field } from './Field'
 
 const reorder = (list, startIndex, endIndex) => {
     const result = Array.from(list);
@@ -62,6 +63,7 @@ export class ImagePickerField extends CustomField {
             file.base64Data = await toBase64(file).catch(console.error);
             const fileProvider = getFileProvider();
             var result = await fileProvider.upload(file, (file) => file.base64Data);
+            console.log('UPLOAD', result);
             if (result.success) {
                 file.fileId = result.fileId;
             } else {
@@ -90,7 +92,6 @@ export class ImagePickerField extends CustomField {
     }
     async componentDidMount() {
         try {
-            if (super.componentDidMount) super.componentDidMount();
             if (this.props.value) {
                 this.setState({ loading: true });
                 var files = [];
@@ -129,8 +130,6 @@ export class ImagePickerField extends CustomField {
                 this.componentDidMount.call(this);
             }
         }
-        else {
-        }
     }
     form() {
         const { title, description, mini, multi, value } = this.props;
@@ -149,7 +148,7 @@ export class ImagePickerField extends CustomField {
         const addButton = multi && this.state.files.length > 0 ? (
             <div className="p-2">
                 <div style={{ float: 'right', height: '100%' }}>
-                    <button onClick={this.uploadFile.bind(this)} type="button" className="btn btn-primary btn-size-lg" style={{ height: 70, minWidth: 100 }}><i className="bi bi-upload"></i> {translate("IMAGEPICKER.EMPTY.UPLOAD")}</button>
+                    <Field onClick={this.uploadFile.bind(this)} type="button" color="primary" style={{ height: 70, minWidth: 100 }} left={<i className="bi bi-upload"></i>} title="IMAGEPICKER.EMPTY.UPLOAD"></Field>
                 </div>
                 <p>{emptyDesc}</p>
             </div>
@@ -162,7 +161,7 @@ export class ImagePickerField extends CustomField {
             <div {...dragProps} className="border border-secondary rounded p-3" style={{ minHeight: 100, maxHeight: this.props.disableMaxHeight ? 'none' : 300, overflow: 'hidden', overflowY: 'auto', position: 'relative' }}>
                 {isEmpty ? (<div className="p-2">
                     <div style={{ float: 'right', height: '100%' }}>
-                        <button onClick={this.uploadFile.bind(this)} type="button" className="btn btn-primary btn-size-lg" style={{ height: 70, minWidth: 100 }}><i className="bi bi-upload"></i> {translate("IMAGEPICKER.EMPTY.UPLOAD")}</button>
+                        <Field onClick={this.uploadFile.bind(this)} type="button" color="primary" style={{ height: 70, minWidth: 100 }} left={<i className="bi bi-upload"></i>} title="IMAGEPICKER.EMPTY.UPLOAD"></Field>
                     </div>
                     <label className="text-dark font-weight-bold">{emptyTitle}</label>
                     <p>{emptyDesc}</p>
@@ -245,8 +244,8 @@ export class ImagePickerField extends CustomField {
                 </div>
             </div>
             <div className="col-sm-12 col-xs-6 col-md-6">
-                <button onClick={() => { this.setState({ files: this.state.files.filter((item) => item.fileId != firstFile.fileId), dragEntered: false }); }} type="button" className="btn btn-outline-danger btn-size-lg"
-                    style={{ height: compact ? 70 : '100%', minWidth: compact ? 70 : 100, float: 'right' }}><i className="bi bi-trash"></i>{translate('IMAGEPICKER.FILLED.REMOVE')}</button>
+                <Field onClick={() => { this.setState({ files: this.state.files.filter((item) => item.fileId != firstFile.fileId), dragEntered: false }); }} type="button" color="danger" outline
+                    style={{ height: compact ? 70 : '100%', minWidth: compact ? 70 : 100, float: 'right' }} left={<i className="bi bi-trash"></i>} title="IMAGEPICKER.FILLED.REMOVE"></Field>
             </div>
         </div>;
     }

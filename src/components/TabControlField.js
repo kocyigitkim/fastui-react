@@ -64,7 +64,7 @@ export default class TabControlField extends CustomField {
                     <div className="col-xs-12 col-sm-12 col-md-3">
                         <ul className="nav flex-column nav-pills">
                             {pages.map((page, index) => (
-                                <li className='nav-item' key={index}>
+                                <li className='nav-item' key={page.name + "tp" + index}>
                                     <a style={{ userSelect: 'none', cursor: 'pointer' }} className={`nav-link ${index === tabIndex && 'active'}`} onClick={() => { this.setTab.call(this, index) }}>{translate(page.name)}</a>
                                 </li>
                             ))}
@@ -79,7 +79,7 @@ export default class TabControlField extends CustomField {
                                 }
                                 const TabContent = page.content;
                                 return (
-                                    <div key={index} className={"tab-pane" + (index === this.state.tabIndex ? ' active' : '')} id={page.id}>
+                                    <div key={page.name + "" + index} className={"tab-pane" + (index === this.state.tabIndex ? ' active' : '')} id={page.id}>
                                         <div className="card card-block">
                                             <div className="card-body"><TabContent></TabContent></div>
                                         </div>

@@ -7,6 +7,8 @@ import Portal from "./Portal";
 import { v4 as uuid } from 'uuid';
 import Loading from './Loading';
 import { translate } from '../utils'
+import { Field } from './Field'
+import { DynoState } from 'faststate-react/states/DynoState'
 
 /**
  * @member {string} id
@@ -106,7 +108,7 @@ export class FastDialog {
             disableBackdropClick: disableBackdropClick,
             actions: [
                 ({ dialog }) => {
-                    return <button onClick={async (evt) => {
+                    return <Field onClick={async (evt) => {
                         dialog.setLoading(true);
                         if (onNo) {
                             var r = onNo(evt, dialog);
@@ -114,10 +116,10 @@ export class FastDialog {
                         }
                         dialog.setLoading(false);
                         dialog.setOpen(false);
-                    }} type="button" className="btn btn-outline-default" style={{ minWidth: 70 }}>{translate("DIALOG.NO")}</button>
+                    }} type="button" color="default" outline style={{ minWidth: 70 }} title="DIALOG.NO"></Field>
                 },
                 ({ dialog }) => {
-                    return <button onClick={async (evt) => {
+                    return <Field onClick={async (evt) => {
                         dialog.setLoading(true);
                         if (onYes) {
                             var r = onYes(evt, dialog);
@@ -125,10 +127,49 @@ export class FastDialog {
                         }
                         dialog.setLoading(false);
                         dialog.setOpen(false);
-                    }} type="button" className="btn btn-primary" style={{ minWidth: 70 }}>{translate("DIALOG.YES")}</button>
+                    }} type="button" color="primary" style={{ minWidth: 70 }} title="DIALOG.YES"></Field>
                 }
             ]
         });
+        dlg.setOpen(true);
+    }
+    static async showInput({ title, message, size, onYes, onNo, onClose, disableBackdropClick, inputProps, inputTitle }) {
+        var state = new DynoState();
+
+        var dlg = await FastDialog.create({
+            title: title,
+            content: ((props) => {
+                const [index, setIndex] = React.useState(0);
+                if (!this.forceUpdate) {
+                    this.forceUpdate = () => {
+                        setIndex(index + 1);
+                    };
+                }
+
+                return <div>
+                    {message}
+
+                    <Field {...inputProps} title={inputTitle} type="text" value={state.value(this, 'inputValue')} onChange={(value) => {
+                        state.value(this, 'inputValue').write(value);
+                        setIndex(index + 1);
+                    }}></Field>
+                </div>
+            }),
+            size: size,
+            onClose: onClose,
+            disableBackdropClick: disableBackdropClick,
+            actions: [
+                ({ dialog }) => {
+                    return <Field onClick={async (evt) => {
+                        if (onYes) {
+                            var r = onYes(evt, dialog);
+                            if (r instanceof Promise) await r.catch(console.error);
+                        }
+                    }} type="button" color="primary" style={{ minWidth: 70 }} title="DIALOG.YES"></Field>
+                }
+            ]
+        });
+        dlg.state = state;
         dlg.setOpen(true);
     }
 }
@@ -160,7 +201,6 @@ export class FastDialogContainer extends Component {
                     overflowY: 'auto',
                     ...(dialog.isOpen ? {
                         backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                        backdropFilter: 'blur(5px)',
                         pointerEvents: 'auto'
                     } : {
                         backgroundColor: 'transparent',

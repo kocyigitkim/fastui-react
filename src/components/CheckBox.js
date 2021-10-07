@@ -9,7 +9,7 @@ export class CheckBoxField extends CustomField {
     id = "chk" + uuid().replace(/\{|\}|\-/g, "");
     grid(props) {
         const value = this.props.value || props.value;
-        return <div>{translate(value !== null && value !== undefied ? ('CHECK.'(value ? 'TRUE' : 'FALSE')) : "CHECK.FALSE").toString()}</div>;
+        return <div>{translate(value !== null && value !== undefined ? ('CHECKBOX.' + (value ? 'ON' : 'OFF')) : "CHECKBOX.OFF").toString()}</div>;
     }
     componentDidMount() {
         window.jQuery("#" + this.id).bootstrapToggle();

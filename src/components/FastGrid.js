@@ -14,6 +14,7 @@ import toast from 'react-hot-toast';
 import * as xlsx from 'xlsx'
 import moment from 'moment';
 import * as filesaver from 'file-saver'
+import { Field } from '..';
 export default class FastGrid extends Component {
     state = {
         page: 0,
@@ -492,10 +493,10 @@ export default class FastGrid extends Component {
                             <div className="row" style={{ margin: 0, marginBottom: 10 }}>
                                 <div className="col"> <h4 className="card-title">{titlePlural || title}</h4></div>
                                 <div>
-                                    <i onClick={this.refreshList.bind(this)} className="bi bi-arrow-clockwise btn btn-outline-dark" style={{ padding: '10px 20px', margin: 1, cursor: 'pointer', fontWeight: 'bold', fontSize: '1.31rem' }}></i>
+                                    <Field type="button" color="dark" outline style={{ padding: '10px 20px', margin: 1, cursor: 'pointer', fontWeight: 'bold', fontSize: '1.31rem' }} onClick={this.refreshList.bind(this)} left={<i className="bi bi-arrow-clockwise"></i>} title=""></Field>
                                 </div>
                                 <div>
-                                    <i onClick={this.exportList.bind(this)} className="bi bi-cloud-download btn btn-outline-dark" style={{ padding: '10px 20px', margin: 1, cursor: 'pointer', fontWeight: 'bold', fontSize: '1.3rem' }}></i>
+                                    <Field type="button" color="dark" outline style={{ padding: '10px 20px', margin: 1, cursor: 'pointer', fontWeight: 'bold', fontSize: '1.31rem' }} onClick={this.exportList.bind(this)} left={<i className="bi bi-cloud-download"></i>} title=""></Field>
                                 </div>
                             </div>
                         </div>
@@ -534,7 +535,7 @@ export default class FastGrid extends Component {
                                         }
                                         return child;
                                     }).map(item => <div className="row">
-                                        <div className="col-6 font-weight-bold"> {translate(item.props.title || items.props.name)}</div>
+                                        <div className="col-6 font-weight-bold"> {translate(item.props.title || item.props.name)}</div>
                                         <div className="col-6 datagrid-cell"> {item}</div>
                                     </div>)}
                                     {
@@ -661,7 +662,7 @@ class FastPagination extends Component {
         if (page + 1 < pageCount) items.push([">>", pageCount - 1]);
         return <ul className="pagination" style={{ margin: 0 }}>{items.map(item => {
             return <li key={"k" + item} className={`page-item ${item[1] === page ? 'active' : null}`}>
-                <button type="button" style={{ padding: 10 }} onClick={() => { setPage(item[1]) }} className="page-link" style={{ boxShadow: getElevation(item[1] === page ? 2 : 0) }}>{item[0]}</button>
+                <Field type="button" style={{ padding: 10 }} onClick={() => { setPage(item[1]) }} className="page-link" style={{ boxShadow: getElevation(item[1] === page ? 2 : 0) }} left={item[0]} title=""></Field>
             </li>;
         })}</ul>;
     }
@@ -727,14 +728,14 @@ class FastGridCreate extends Component {
     render() {
 
         return <div>
-            <button type="button" onClick={() => {
+            <Field type="button" color="primary" onClick={() => {
                 if (this.props.route) {
                     redirectTo(RouteBuilder.location().setAction(this.props.route, "create").build());
                 }
                 else {
                     this.props.setMode('create');
                 }
-            }} className="btn btn-primary"><i className="bi bi-plus"></i> {translate("DATAGRID.ACTION.CREATE")}</button>
+            }} left={<i className="bi bi-plus"></i>} title="DATAGRID.ACTION.CREATE"></Field>
         </div>
     }
 }
@@ -920,14 +921,14 @@ class RenderFilter extends Component {
                         </div>
                     </div>
                     <div style={{ display: 'flex', marginTop: 5 }}>
-                        <button type="button" onClick={() => {
+                        <Field type="button" onClick={() => {
                             this.props.setFilter(col.props.name, this.state.selectedItems);
                             this.setState({ show: false });
-                        }} className="btn btn-primary" style={{ flex: 1, margin: 3 }}>{translate("DATAGRID.FILTER.APPLY")}</button>
-                        <button type="button" onClick={() => {
+                        }} color="primary" style={{ flex: 1, margin: 3 }} title="DATAGRID.FILTER.APPLY"></Field>
+                        <Field type="button" onClick={() => {
                             this.props.resetFilter(col.props.name);
                             this.setState({ show: false, selectedItems: [] });
-                        }} className="btn btn-outline-dark" style={{ flex: 1, margin: 3 }}>{translate("DATAGRID.FILTER.RESET")}</button>
+                        }} color="dark" outline style={{ flex: 1, margin: 3 }} title="DATAGRID.FILTER.RESET"></Field>
                     </div>
                 </div>
             </div>

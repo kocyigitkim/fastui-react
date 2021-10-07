@@ -9,7 +9,7 @@ export default class Portal extends Component {
                 top: 0,
                 width: '100%',
                 height: '100%',
-                zIndex: 99999,
+                zIndex: 9910,
                 ...this.props.style
             }}>
                 {this.props.children}

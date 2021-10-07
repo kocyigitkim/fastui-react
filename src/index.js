@@ -34,6 +34,7 @@ import { RemoteFileProvider } from './FileProvider'
 import LabelField from './components/LabelField'
 import AccessDenied from './components/AccessDenied'
 import State from 'faststate-react/states/State'
+import { ReactBridge } from './ReactBridge'
 
 function InitializeFastUI({ translate, apiHandler, redisEnabled, corsEnabled, permissionBuilder, fileProvider, useHistory, react }) {
     global.window.jQuery = JQUERY;
@@ -364,6 +365,44 @@ span.select2.select2-container.select2-container--default{
 .card{
     border: none !important;
 }
+.card {
+   box-shadow: 0px 10px 50px rgb(0 0 0 / 10%) !important;
+   border-radius: 16px !important;
+}
+.card-header{
+    border-top-left-radius: 16px !important;
+    border-top-right-radius: 16px !important;
+}
+.card-footer{
+    border-bottom-left-radius: 16px !important;
+    border-bottom-right-radius: 16px !important;
+}
+
+.nav.nav-pills .nav-item .nav-link{
+    border-radius: 14px;
+    padding: 16px 20px;
+}
+.nav.nav-pills .nav-item .nav-link.active{
+    box-shadow: 0px 5px 10px rgb(54 153 255 / 20%);
+    z-index: 1;
+}
+@media only screen and (max-width: 800px){
+    .card{
+        box-shadow: none !important;
+        border-radius: 0px !important;
+    }
+    .card-body{
+        padding: 3px !important;
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
+    }
+    .nav.nav-pills .nav-item .nav-link{
+        border-radius: 4px !important;
+    }
+}
+span.select2-container.select2-container--default.select2-container--open {
+    z-index: 9999;
+}
  `;
 
     var __rawStyleChild = global.window.document.createElement("style");
@@ -391,5 +430,6 @@ export {
     FastUIProvider,
     FastDialog,
     AccessDenied,
-    CustomField
+    CustomField,
+    ReactBridge
 };

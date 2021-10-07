@@ -4,6 +4,7 @@ import Loading from './Loading'
 import { getApiHandler } from './../utils';
 import toast from 'react-hot-toast';
 import { DynoState } from 'faststate-react/states/DynoState';
+import { Field } from '..';
 
 
 export class FastForm extends Component {
@@ -216,7 +217,7 @@ FastForm.CustomAction = class FastFormCustomAction extends Component {
         const translated = translate(title);
 
         return <div style={{ display: 'contents' }}>
-            <button {...{ ...this.props, form: null, title: translated }} type="button" onClick={this.props.onClick}>{this.props.children}{translated}</button>
+            <Field {...{ ...this.props, form: null, title: translated }} type="button" onClick={this.props.onClick} left={this.props.children} title={translated}></Field>
         </div>;
     }
 }
@@ -224,35 +225,35 @@ FastForm.CustomAction = class FastFormCustomAction extends Component {
 FastForm.Cancel = class FastFormCancelAction extends Component {
     static action = 'cancel';
     render() {
-        return <FastForm.CustomAction className="btn btn-outline-danger" title="FORM.CANCEL" {...this.props} style={{ padding: '7px 20px', ...this.props.style }}><i className="bi bi-x-lg mr-2"></i></FastForm.CustomAction>;
+        return <FastForm.CustomAction color="danger" outline title="FORM.CANCEL" {...this.props} style={{ padding: '7px 20px', ...this.props.style }}><i className="bi bi-x-lg mr-2"></i></FastForm.CustomAction>;
     }
 };
 
 FastForm.Save = class FastFormSaveAction extends Component {
     static action = 'save';
     render() {
-        return <FastForm.CustomAction className="btn btn-primary" title="FORM.SAVE" {...this.props} style={{ padding: '7px 20px', ...this.props.style }}><i className="bi bi-save mr-2"></i></FastForm.CustomAction>;
+        return <FastForm.CustomAction color="primary" outline title="FORM.SAVE" {...this.props} style={{ padding: '7px 20px', ...this.props.style }}><i className="bi bi-save mr-2"></i></FastForm.CustomAction>;
     }
 };
 
 FastForm.Delete = class FastFormDeleteAction extends Component {
     static action = 'delete';
     render() {
-        return <FastForm.CustomAction className="btn btn-outline-dark" title="FORM.DELETE" {...this.props} style={{ padding: '7px 20px', ...this.props.style }}><i className="bi bi-trash mr-2"></i></FastForm.CustomAction>;
+        return <FastForm.CustomAction color="dark" outline title="FORM.DELETE" {...this.props} style={{ padding: '7px 20px', ...this.props.style }}><i className="bi bi-trash mr-2"></i></FastForm.CustomAction>;
     }
 }
 
 FastForm.Edit = class FastFormEditAction extends Component {
     static action = 'delete';
     render() {
-        return <FastForm.CustomAction className="btn btn-outline-primary" title="FORM.EDIT" {...this.props} style={{ padding: '7px 20px', ...this.props.style }}><i className="bi bi-pen mr-2"></i></FastForm.CustomAction>;
+        return <FastForm.CustomAction color="primary" outline title="FORM.EDIT" {...this.props} style={{ padding: '7px 20px', ...this.props.style }}><i className="bi bi-pen mr-2"></i></FastForm.CustomAction>;
     }
 }
 
 FastForm.View = class FastFormViewAction extends Component {
     static action = 'detail';
     render() {
-        return <FastForm.CustomAction className="btn btn-outline-dark" title="FORM.VIEW" {...this.props} style={{ padding: '7px 20px', ...this.props.style }}><i className="bi bi-arrow-up-right-square mr-2"></i></FastForm.CustomAction>;
+        return <FastForm.CustomAction color="dark" outline title="FORM.VIEW" {...this.props} style={{ padding: '7px 20px', ...this.props.style }}><i className="bi bi-arrow-up-right-square mr-2"></i></FastForm.CustomAction>;
     }
 }
 
