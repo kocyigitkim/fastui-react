@@ -5,6 +5,7 @@ import { CustomField } from "./CustomField";
 import ReactSelect from 'react-select2-wrapper'
 import { v4 as uuid } from 'uuid';
 import Loading from './Loading'
+import deepEqual from 'deep-equal';
 export default class ComboBoxField extends CustomField {
     state = {
         options: [],
@@ -57,6 +58,9 @@ export default class ComboBoxField extends CustomField {
         }).bind(this));
         await dataSource.retrieve();
     }
+    async componentDidUpdate() {
+        this.updateCombobox();
+    }
     updateCombobox() {
         const dataSource = this.getDataSource();
         if (!dataSource) return;
@@ -69,7 +73,7 @@ export default class ComboBoxField extends CustomField {
         if (typeof valueSelector != "function") {
             valueSelector = ((k, data) => data[k]).bind(this, valueSelector);
         }
-        const selectedValues = (this.props.value || []);
+        var selectedValues = (this.props.value || []);
 
         if (this.props.nested) {
             const nestedProperty = "ParentId";
@@ -107,6 +111,13 @@ export default class ComboBoxField extends CustomField {
                 jQ.fn.select2ToTree.call(select2El, { treeData: { dataArr: nestedBuilder(dataSource.records) } });
             }
         }
+        if (deepEqual(selectedValues, this.props.value)) return;
+
+        if (selectedValues) {
+            if (!Array.isArray(selectedValues)) selectedValues = [selectedValues];
+            if (selectedValues[0] == undefined || selectedValues[0] == null) return;
+            this.onChange(selectedValues);
+        }
     }
     /**
      * @returns {IDataSource}
@@ -115,7 +126,6 @@ export default class ComboBoxField extends CustomField {
         return this.props.datasource;
     }
     onChange(value, setPermanently) {
-        if (this.state.options.length === 0 && !this.state.inited) return;
 
         if (value && value.target) {
             var selectedIds = [];
@@ -125,10 +135,17 @@ export default class ComboBoxField extends CustomField {
 
             value = selectedIds;
         }
-        if (setPermanently || (value & (Array.isArray(value) ? (value.length > 0 || ((Array.isArray(this.props.value) && this.props.value.length != value.length) || !this.props.value)) : true))) {
-            if (this.props.onChange) this.props.onChange(value);
+        if (!this.props.multiple) {
+            if (Array.isArray(value)) {
+                value = value[0];
+            }
         }
-
+        else {
+            if (!Array.isArray(value)) {
+                value = [value];
+            }
+        }
+        if (this.props.onChange) this.props.onChange(value);
     }
     onOpen(evt) {
 

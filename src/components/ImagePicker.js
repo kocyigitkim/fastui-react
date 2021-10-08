@@ -63,7 +63,6 @@ export class ImagePickerField extends CustomField {
             file.base64Data = await toBase64(file).catch(console.error);
             const fileProvider = getFileProvider();
             var result = await fileProvider.upload(file, (file) => file.base64Data);
-            console.log('UPLOAD', result);
             if (result.success) {
                 file.fileId = result.fileId;
             } else {

@@ -74,12 +74,13 @@ export default class TabControlField extends CustomField {
                     <div className="col-xs-12 col-sm-12 col-md-9">
                         <div className="tab-content">
                             {pages.map((page, index) => {
+                                var isVisible = true;
                                 if (index !== tabIndex) {
-                                    return <div></div>;
+                                    isVisible = false;
                                 }
                                 const TabContent = page.content;
                                 return (
-                                    <div key={page.name + "" + index} className={"tab-pane" + (index === this.state.tabIndex ? ' active' : '')} id={page.id}>
+                                    <div key={page.name + "" + index} className={"tab-pane" + (index === this.state.tabIndex ? ' active' : '')} id={page.id} style={{ display: (isVisible ? 'inherit' : 'none') }}>
                                         <div className="card card-block">
                                             <div className="card-body"><TabContent></TabContent></div>
                                         </div>

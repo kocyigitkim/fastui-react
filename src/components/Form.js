@@ -83,31 +83,32 @@ export class FastForm extends Component {
     async actionOnClick(action) {
         action = action.action;
         var request = { ...this.props.extraArgs, ...this.getState().fields };
-
+        var newRequest = {};
         for (var fieldName in request) {
             var fieldValue = request[fieldName];
             if (Array.isArray(fieldValue)) {
-                fieldValue = fieldValue.map(item => {
-                    return processFieldValue(item);
-                });
+                var newFieldValue = [];
+                for (var i = 0; i < fieldValue.length; i++) {
+                    newFieldValue.push(processFieldValue(fieldValue[i]));
+                }
+                fieldValue = newFieldValue;
             }
             else {
                 fieldValue = processFieldValue(fieldValue);
             }
-            request[fieldName] = fieldValue;
+            newRequest[fieldName] = fieldValue;
         }
 
         const context = {
             action: action,
-            data: request,
-            submit: (() => { this.onSubmit.call(this, action, request); }).bind(this)
+            data: newRequest,
+            submit: (() => { this.onSubmit.call(this, action, newRequest); }).bind(this)
         };
-
         if (this.props.submit) {
             this.props.submit.call(this, context);
         }
         else {
-            this.onSubmit.call(this, action, request);
+            this.onSubmit.call(this, action, newRequest);
         }
     }
 
@@ -187,9 +188,10 @@ export class FastForm extends Component {
 
 function processFieldValue(value) {
     if (value === null || value === undefined) return value;
+    var oldvalue = value;
     if (typeof value === 'object') {
         if (value.fastuiField) {
-            return value.fastuiField(value);
+            value = value.fastuiField.call(value, value);
         }
     }
     return value;
