@@ -1,9 +1,6 @@
 import React, { Component } from 'react'
-import 'bootstrap-icons/font/bootstrap-icons.css'
-import 'bootstrap4-toggle/css/bootstrap4-toggle.min.css'
 import JQUERY from 'jquery/dist/jquery.slim'
 
-import 'bootstrap/dist/js/bootstrap.bundle'
 import './styles.module.css'
 import Loading from './components/Loading'
 import { FastForm } from './components/Form'
