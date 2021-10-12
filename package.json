@@ -1,6 +1,6 @@
 {
   "name": "fastui-react",
-  "version": "1.1.6",
+  "version": "2.0.0",
   "description": "Fast UI for React.JS",
   "author": "@kocyigitkim",
   "license": "MIT",
@@ -66,7 +66,7 @@
     "color": "^3.2.1",
     "deep-equal": "^2.0.5",
     "fastapi-express-client": "^1.1.1",
-    "faststate-react": "^1.1.1",
+    "faststate-react": "^1.2.0",
     "file-saver": "^2.0.5",
     "filesize": "^7.0.0",
     "history": "^5.0.1",

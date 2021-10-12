@@ -18,3 +18,20 @@ export class ReactBridge extends Component {
         </div>;
     }
 }
+export class CustomBridge extends Component {
+    renderBridge() {
+        this.props.dom.render(this.props.children, this.bridgeContainer);
+    }
+    componentDidUpdate() {
+        this.renderBridge.call(this);
+    }
+    render() {
+        return <div ref={(r) => {
+            if (!this.bridgeContainer) {
+                this.bridgeContainer = r;
+                this.renderBridge.call(this);
+            }
+        }}>
+        </div>;
+    }
+}

@@ -13,8 +13,7 @@ import { FastDialog } from './Dialog'
 import toast from 'react-hot-toast';
 import * as xlsx from 'xlsx'
 import moment from 'moment';
-import * as filesaver from 'file-saver'
-import { Field } from '..';
+import { Field } from './Field';
 export default class FastGrid extends Component {
     state = {
         page: 0,
@@ -802,7 +801,7 @@ class FastGridNewForm extends Component {
         this.getState().value(null, name).writeUpdate(value);
     }
     getFieldProps(name, onChange) {
-        const fieldValueRef = this._state.value(null, name);
+        const fieldValueRef = this.getState().value(null, name);
         return {
             datagrid: this.props.datagrid, name: name, value: fieldValueRef, onChange: (v) => {
                 if (v !== null && v !== undefined) {

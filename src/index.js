@@ -4,26 +4,31 @@ import JQUERY from 'jquery/dist/jquery.slim'
 import './styles.module.css'
 import Loading from './components/Loading'
 import { FastForm } from './components/Form'
-import { Field } from "./components/Field";
+import { Field } from './components/Field'
 import FastGrid from './components/FastGrid'
-import { TextField } from "./components/TextField"
-import { CustomField } from "./components/CustomField"
+import { TextField } from './components/TextField'
+import { CustomField } from './components/CustomField'
 import { ButtonField } from './components/ButtonField'
 import * as FastApi from 'fastapi-express-client'
-import { ImagePickerField } from './components/ImagePicker';
-import ComboBoxField from './components/ComboBoxField';
-import { IDataSource, LocalDataSource, RemoteDataSource } from './DataSource';
-import TabControlField from './components/TabControlField';
-import RichTextField from './components/RichTextField';
-import TitleField from './components/TitleField';
-import { PermissionBuilder } from './PermissionBuilder';
-import FastUIProvider from './components/FastUIProvider';
+import { ImagePickerField } from './components/ImagePicker'
+import ComboBoxField from './components/ComboBoxField'
+import { IDataSource, LocalDataSource, RemoteDataSource } from './DataSource'
+import TabControlField from './components/TabControlField'
+import RichTextField from './components/RichTextField'
+import TitleField from './components/TitleField'
+import { PermissionBuilder } from './PermissionBuilder'
+import FastUIProvider from './components/FastUIProvider'
 
-import ImageField from './components/ImageField';
-import * as PanelField from './components/PanelField';
-import MoneyField from './components/MoneyField';
+import ImageField from './components/ImageField'
+import * as PanelField from './components/PanelField'
+import MoneyField from './components/MoneyField'
 import { translate, getApiHandler, getPermissionBuilder } from './utils'
-import { initPredefinedValidators, setValidator, validate, validateMultiple } from './validation';
+import {
+  initPredefinedValidators,
+  setValidator,
+  validate,
+  validateMultiple
+} from './validation'
 import { CheckBoxField } from './components/CheckBox'
 import MapPickerField from './components/MapPickerField'
 import { FastDialog } from './components/Dialog'
@@ -31,89 +36,94 @@ import { RemoteFileProvider } from './FileProvider'
 import LabelField from './components/LabelField'
 import AccessDenied from './components/AccessDenied'
 import State from 'faststate-react/states/State'
-import { ReactBridge } from './ReactBridge'
+import { ReactBridge, CustomBridge } from './ReactBridge'
 
-function InitializeFastUI({ translate, apiHandler, redisEnabled, corsEnabled, permissionBuilder, fileProvider, useHistory, react }) {
-    global.window.jQuery = JQUERY;
-    global.jQuery = JQUERY;
-    global.window.$ = JQUERY;
-    global.$ = JQUERY;
-    require('select2/dist/js/select2.js');
+function InitializeFastUI({
+  translate,
+  apiHandler,
+  redisEnabled,
+  corsEnabled,
+  permissionBuilder,
+  fileProvider,
+  useHistory,
+  react
+}) {
+  global.window.jQuery = JQUERY
+  global.jQuery = JQUERY
+  global.window.$ = JQUERY
+  global.$ = JQUERY
+  require('select2/dist/js/select2.js')
 
+  require('bootstrap-select/dist/js/bootstrap-select')
+  require('bootstrap4-toggle/js/bootstrap4-toggle.min.js')
 
-    require('bootstrap-select/dist/js/bootstrap-select');
-    require('bootstrap4-toggle/js/bootstrap4-toggle.min.js');
+  if (!apiHandler) {
+    apiHandler = new FastApi.FastApiClient()
+  }
+  if (apiHandler && redisEnabled) {
+    apiHandler.setSession(FastApi.FastApiSessionController.FastApiSession)
+  } else {
+    apiHandler.setSession(FastApi.FastApiSessionController.ExpressSession)
+  }
+  if (apiHandler && apiHandler.setCors && corsEnabled) {
+    apiHandler.setCors()
+  }
 
+  if (!fileProvider) {
+    fileProvider = new RemoteFileProvider()
+  }
 
+  if (!permissionBuilder) {
+    permissionBuilder = new PermissionBuilder({})
+  }
 
-    if (!apiHandler) {
-        apiHandler = new FastApi.FastApiClient();
-    }
-    if (apiHandler && redisEnabled) {
-        apiHandler.setSession(FastApi.FastApiSessionController.FastApiSession);
-    }
-    else {
-        apiHandler.setSession(FastApi.FastApiSessionController.ExpressSession);
-    }
-    if (apiHandler && apiHandler.setCors && corsEnabled) {
-        apiHandler.setCors();
-    }
+  global.window.fastui = {
+    routerState: new State(),
+    useHistory,
+    react,
+    translate,
+    apiHandler,
+    redisEnabled,
+    corsEnabled,
+    permissionBuilder,
+    fileProvider,
+    validators: [],
+    validate: validate,
+    validateMultiple: validateMultiple
+  }
 
-    if (!fileProvider) {
-        fileProvider = new RemoteFileProvider();
-    }
+  initPredefinedValidators()
 
-    if (!permissionBuilder) {
-        permissionBuilder = new PermissionBuilder({});
-    }
-
-    global.window.fastui = {
-        routerState: new State(),
-        useHistory,
-        react,
-        translate,
-        apiHandler,
-        redisEnabled,
-        corsEnabled,
-        permissionBuilder,
-        fileProvider,
-        validators: [],
-        validate: validate,
-        validateMultiple: validateMultiple
-    };
-
-    initPredefinedValidators();
-
-    //Register fields
-    Field.register("title", TitleField);
-    Field.register("label", LabelField);
-    Field.register("text", TextField);
-    Field.register("number", TextField);
-    Field.register("email", TextField);
-    Field.register("phone", TextField);
-    Field.register("money", MoneyField);
-    Field.register("date", TextField);
-    Field.register("time", TextField);
-    Field.register("username", TextField);
-    Field.register("firstname", TextField);
-    Field.register("lastname", TextField);
-    Field.register("checkbox", CheckBoxField);
-    Field.register("name", TextField);
-    Field.register("surname", TextField);
-    Field.register("password", TextField);
-    Field.register("button", ButtonField);
-    Field.register("combobox", ComboBoxField);
-    Field.register("image", ImageField);
-    Field.register("image-picker", ImagePickerField);
-    Field.register("richtext", RichTextField);
-    Field.register("panel", PanelField.PanelField);
-    Field.register("map-picker", MapPickerField);
-    Field.register("tabcontrol", TabControlField);
-    registerCSS();
+  //Register fields
+  Field.register('title', TitleField)
+  Field.register('label', LabelField)
+  Field.register('text', TextField)
+  Field.register('number', TextField)
+  Field.register('email', TextField)
+  Field.register('phone', TextField)
+  Field.register('money', MoneyField)
+  Field.register('date', TextField)
+  Field.register('time', TextField)
+  Field.register('username', TextField)
+  Field.register('firstname', TextField)
+  Field.register('lastname', TextField)
+  Field.register('checkbox', CheckBoxField)
+  Field.register('name', TextField)
+  Field.register('surname', TextField)
+  Field.register('password', TextField)
+  Field.register('button', ButtonField)
+  Field.register('combobox', ComboBoxField)
+  Field.register('image', ImageField)
+  Field.register('image-picker', ImagePickerField)
+  Field.register('richtext', RichTextField)
+  Field.register('panel', PanelField.PanelField)
+  Field.register('map-picker', MapPickerField)
+  Field.register('tabcontrol', TabControlField)
+  registerCSS()
 }
 
 function registerCSS() {
-    var css = `
+  var css = `
  table tr {
   animation: table-row-load-ani 250ms 1 ease;
 }
@@ -400,33 +410,36 @@ span.select2.select2-container.select2-container--default{
 span.select2-container.select2-container--default.select2-container--open {
     z-index: 9999;
 }
- `;
+.form-control{
+    min-height: calc(1.5em + 1.3rem + 8px) !important;
+}
+ `
 
-    var __rawStyleChild = global.window.document.createElement("style");
-    __rawStyleChild.innerText = css;
-    global.window.document.head.appendChild(__rawStyleChild);
+  var __rawStyleChild = global.window.document.createElement('style')
+  __rawStyleChild.innerText = css
+  global.window.document.head.appendChild(__rawStyleChild)
 }
 
-
 export {
-    InitializeFastUI,
-    FastForm,
-    FastGrid,
-    Field,
-    TextField,
-    PanelField,
-    IDataSource,
-    LocalDataSource,
-    RemoteDataSource,
-    Loading,
-    translate,
-    setValidator,
-    validate,
-    getApiHandler,
-    getPermissionBuilder,
-    FastUIProvider,
-    FastDialog,
-    AccessDenied,
-    CustomField,
-    ReactBridge
-};
+  InitializeFastUI,
+  FastForm,
+  FastGrid,
+  Field,
+  TextField,
+  PanelField,
+  IDataSource,
+  LocalDataSource,
+  RemoteDataSource,
+  Loading,
+  translate,
+  setValidator,
+  validate,
+  getApiHandler,
+  getPermissionBuilder,
+  FastUIProvider,
+  FastDialog,
+  AccessDenied,
+  CustomField,
+  ReactBridge,
+  CustomBridge
+}

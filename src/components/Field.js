@@ -7,19 +7,42 @@ export class Field extends Component {
     static register(name, component) {
         Field.registry[name] = component;
     }
+    constructor(props) {
+        super(props);
+        this.refresh = this.refresh.bind(this);
+        this.refresh();
+    }
+    componentDidMount() {
+        this.refresh();
+    }
+    componentDidUpdate() {
+        this.refresh();
+    }
+    refresh() {
+        if(this.rawValue) return;
+        const props = this.props;
+        if (props.value !== undefined && props.value !== null && (props.value instanceof DynoValue || (props.value.__proto__ && props.value.__proto__.constructor && props.value.__proto__.constructor.name.toLowerCase() === 'dynovalue') || props.value.read)) {
+            this.rawValue = props.value;
+            if (!this.rawValue.setReference) {
+                console.log('Warning: FastUI/Field.js: props.value is not a DynoValue, but has a read method. This is probably a mistake.');
+                return <div>{"This is probably a mistake"}</div>;
+            }
+            this.rawValue.setReference(this);
+            this.isReferencedValue = true;
+        }
+    }
     render() {
         const { type } = this.props;
         const DynamicComponent = Field.registry[type] || Fragment;
         var props = { ...this.props };
         try {
-            if (props.value !== undefined && props.value !== null && (props.value instanceof DynoValue || (props.value.__proto__ && props.value.__proto__.constructor && props.value.__proto__.constructor.name.toLowerCase() === 'dynovalue') || props.value.read)) {
-                props.rawValue = props.value;
+            if (this.isReferencedValue) {
+                props.value = this.rawValue.read(this);
+                props.rawValue = this.rawValue;
                 props.isReferencedValue = true;
-                props.value = props.value.read(this);
-                const onChange = props.onChange;
-                props.onChange = (FieldOnChange).bind(this, onChange, props.rawValue);
+                props.onChange = (FieldOnChange).bind(this, props.onChange, props.rawValue);
             }
-        } catch (err) { console.log("FIELD ERROR", err) }
+        } catch (err) { console.error(err); }
         return <DynamicComponent {...props}>{props.children}</DynamicComponent>;
     }
 }
@@ -62,7 +85,6 @@ function FieldOnChange(onChange, rawValue, v, ...args) {
 
     var isUpdate = !deepEqual(currentValue, v);
     if (isUpdate) {
-        console.log("FIELD ON CHANGE", v, currentValue, isUpdate);
         rawValue.writeUpdate(v);
     }
     if (!this.componentInitialValueSet && v !== undefined && v !== null) {
