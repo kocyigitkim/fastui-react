@@ -171,12 +171,7 @@ export default class ComboBoxField extends CustomField {
                 {title && <div className="form-label">{translated}</div>}
                 <div style={{ display: 'flex', width: '100%' }}>
                     <div style={{ flex: 1 }}>
-                        {disabled === true ? (
-                            <div>
-                            </div>
-                        ) : (
-                            <ReactSelect {...this.props} value={value} ref={r => this.selectRef = r} onOpen={this.onOpen.bind(this)} multiple={this.props.multiple} style={{ width: '100%' }} placeholder={translate(this.props.title)} data={(!this.props.nested && this.state.options) || []} isLoading={this.state.loading} id={this.id}></ReactSelect>
-                        )}
+                        <ReactSelect {...this.props} value={value} ref={r => this.selectRef = r} onOpen={this.onOpen.bind(this)} multiple={this.props.multiple} style={{ width: '100%' }} placeholder={translate(this.props.title)} data={(!this.props.nested && this.state.options) || []} isLoading={this.state.loading} id={this.id}></ReactSelect>
                     </div>
                     {(disabled !== true && existsValue) ? (<div style={{ display: 'inline-block', marginLeft: 5 }}>
                         <button tabIndex="-1" type="button" className="btn btn-outline-danger" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={this.onChange.bind(this, this.props.nested ? [] : null, true)}><i className="bi bi-x" style={{ fontSize: '1.5rem', padding: 0 }}></i></button>
